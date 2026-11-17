@@ -4,6 +4,8 @@ name: Deploy prod
 # No hay GitHub Environments ni aprobaciones. Las credenciales son repository
 # secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) y `SMOKE_STORE_HOST`
 # es una repository variable (Settings → Secrets and variables → Actions).
+# Este workflow es **solo deploy**: `wrangler deploy` no aplica secretos, así que
+# los 5 runtime secrets del api se sincronizan a mano con `sync-secrets.yml`.
 # Un commit cuyo mensaje lleve `[skip ci]` no dispara este workflow.
 on:
   push:

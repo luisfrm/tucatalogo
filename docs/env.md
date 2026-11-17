@@ -9,7 +9,7 @@ no contiene secretos reales: donde aplica se usa `REPLACE_ME_*`.
 | Entorno | Variables no secretas | Secretos |
 | --- | --- | --- |
 | local | `vars` del `wrangler.jsonc` + `.dev.vars` (gitignored) | `apps/api/.dev.vars` |
-| dev/prod | `vars` de `env.dev` / `env.prod` | `wrangler secret put <NAME> --env <dev\|prod>` |
+| dev/prod | `vars` de `env.dev` / `env.prod` | `wrangler secret put <NAME> --env <dev\|prod>`; en prod lo ejecuta el workflow manual `sync-secrets` desde GitHub Repository secrets |
 
 - En local, `.dev.vars` **tiene prioridad** sobre `vars`. Por eso el
   `wrangler.jsonc` del API declara `EMAIL_DRIVER=console` y el `.dev.vars` de
@@ -23,8 +23,11 @@ no contiene secretos reales: donde aplica se usa `REPLACE_ME_*`.
   `env.prod` con placeholders `REPLACE_ME_*` hasta que el owner cree los
   recursos.
 - **Quién los define:** el owner del repo fija las variables de dev/prod en
-  `wrangler.jsonc` y los secretos con `wrangler secret put`; cada dev define sus
-  valores locales en su `.dev.vars` (nunca se versionan).
+  `wrangler.jsonc`; los 5 secretos de runtime de prod se guardan como
+  **GitHub Repository secrets** y se aplican al worker con el workflow manual
+  `sync-secrets.yml` (`wrangler secret put --env prod`). En dev, si se despliega
+  a mano, se usan `wrangler secret put --env dev` con valores distintos. Cada dev
+  define sus valores locales en su `.dev.vars` (nunca se versionan).
 
 ## Reglas
 
@@ -69,15 +72,15 @@ Leyenda de tipo: **var** = configuración no secreta; **secreto** = Worker secre
 | `EMAIL_DRIVER` | `memory` (ejemplo) / `console` (`wrangler.jsonc`) | `resend` | `resend` | var | `memory` \| `console` \| `resend`; ausente o desconocida → 503 |
 | `EMAIL_FROM` | `TuCatálogo <no-reply@localhost>` | `REPLACE_ME_DEV_EMAIL_FROM` | `TuCatálogo <no-reply@luisrivas.site>` | var | Obligatorio con `resend` |
 | `RESEND_FROM` | — (comentado) | — | — | var | Si existe, tiene prioridad sobre `EMAIL_FROM` |
-| `RESEND_API_KEY` | — | secreto | secreto | secreto | Obligatorio con `EMAIL_DRIVER=resend`; sin él → 503 |
+| `RESEND_API_KEY` | — | secreto | secreto (Repository secret → `sync-secrets`) | secreto | Obligatorio con `EMAIL_DRIVER=resend`; sin él → 503 |
 | `TURNSTILE_MODE` | `test` | `enabled` | `enabled` | var | `test` \| `enabled` \| `disabled` (solo local) |
-| `TURNSTILE_SECRET_KEY` | `1x0000000000000000000000000000000AA` (clave oficial de prueba) | secreto | secreto | secreto | Obligatorio con `enabled` |
+| `TURNSTILE_SECRET_KEY` | `1x0000000000000000000000000000000AA` (clave oficial de prueba) | secreto | secreto (Repository secret → `sync-secrets`) | secreto | Obligatorio con `enabled` |
 | `TURNSTILE_SITE_KEY` | `1x00000000000000000000AA` | — | — | var | Declarada en `Env`; el API no la lee (la usa commercial) |
 | `STORE_ORIGIN_TEMPLATE` | `http://{slug}.localhost:5173` | `https://REPLACE_ME_DEV_WEB_ORIGIN` | `https://{slug}.luisrivas.site` | var | Origen del enlace de reset de tienda |
 | `CONSOLE_ORIGIN` | `http://localhost:5175` | `https://REPLACE_ME_DEV_CONSOLE_ORIGIN` | `https://console-tucatalogo.luisrivas.site` | var | Origen del enlace de reset del console |
-| `BETTER_AUTH_SECRET_STORE` | `.dev.vars` (32+ bytes) | secreto | secreto | secreto | Reino tienda; distinto por entorno |
-| `BETTER_AUTH_SECRET_CONSOLE` | `.dev.vars` (32+ bytes) | secreto | secreto | secreto | Reino console; distinto por entorno |
-| `INIT_TOKEN` | `.dev.vars` (32 bytes / 64 hex; valor local en la regla 5) | secreto (32 bytes / 64 hex) | secreto (32 bytes / 64 hex) | secreto | Solo esta app; rotación en el runbook |
+| `BETTER_AUTH_SECRET_STORE` | `.dev.vars` (32+ bytes) | secreto | secreto (Repository secret → `sync-secrets`) | secreto | Reino tienda; distinto por entorno |
+| `BETTER_AUTH_SECRET_CONSOLE` | `.dev.vars` (32+ bytes) | secreto | secreto (Repository secret → `sync-secrets`) | secreto | Reino console; distinto por entorno |
+| `INIT_TOKEN` | `.dev.vars` (32 bytes / 64 hex; valor local en la regla 5) | secreto (32 bytes / 64 hex) | secreto (32 bytes / 64 hex; Repository secret → `sync-secrets`) | secreto | Solo esta app; rotación en el runbook |
 | `DB` | `tucatalogo-local` | `tucatalogo-dev` | `tucatalogo-prod` | binding | D1 (`database_id` de dev/prod es `REPLACE_ME_*`) |
 | `MEDIA_BUCKET` | `tucatalogo-local` | `tucatalogo-media-dev` | `tucatalogo-media-prod` | binding | R2 |
 
@@ -99,13 +102,15 @@ Leyenda de tipo: **var** = configuración no secreta; **secreto** = Worker secre
 | `APP_DOMAIN` | `localhost` | `REPLACE_ME_DEV_STOREFRONT_HOST` | `luisrivas.site` | var | Dominio con el que se construyen los enlaces a la tienda |
 | `API_INTERNAL_URL` | `http://127.0.0.1:9797` | — | — | var | Solo local |
 | `MEDIA_BASE_URL` | `http://127.0.0.1:9797/media` | `REPLACE_ME_DEV_MEDIA_BASE_URL` | `https://tucatalogo-bucket.luisrivas.site` | var | Declarada; el código de `commercial` no la lee |
-| `TURNSTILE_SITE_KEY` | `1x00000000000000000000AA` | **falta** en `wrangler.jsonc` | — | var | **Obligatoria** en `/registro`: sin ella, 503 |
-| `TURNSTILE_MODE` | `test` | `test` (inerte) | — | var | El código de `commercial` no la lee: el modo real lo aplica el API, donde `test` solo vale en local y dev/prod exigen `enabled` |
+| `TURNSTILE_SITE_KEY` | `1x00000000000000000000AA` | `REPLACE_ME_DEV_TURNSTILE_SITE_KEY` | `0x4AAAAAAAGF7HGDtrRDDGsww` | var | **Obligatoria** en `/registro`: sin ella, 503. Pública: vive en `wrangler.jsonc`, no en GitHub |
+| `TURNSTILE_MODE` | `test` | `enabled` | `enabled` | var | El código de `commercial` no la lee: el modo real lo aplica el API, donde `test` solo vale en local y dev/prod exigen `enabled` |
 | `API` | — (sin binding) | `tucatalogo-api-dev` | `tucatalogo-api-prod` | binding | Service binding |
 
-> La clave de sitio de Turnstile de dev/prod se define como variable del worker
-> `commercial` (no es secreta). El `env.prod` no la declara todavía: se añade al
-> crear el widget real (pendiente cloud).
+> La site key de Turnstile es **pública** y se define como variable del worker
+> `commercial` en `wrangler.jsonc`: `env.prod` ya lleva la clave real
+> (`0x4AAAAAAAGF7HGDtrRDDGsww`). No es un secreto, no va en GitHub y no se inyecta
+> por `wrangler secret put`. El `TURNSTILE_SECRET_KEY` que la valida es un secreto
+> del **api**. En `env.dev` la site key sigue como `REPLACE_ME_DEV_TURNSTILE_SITE_KEY`.
 
 ### `apps/console`
 
@@ -127,20 +132,36 @@ Sin secretos: el `INIT_TOKEN` llega del formulario `/init`.
 ## Variables solo de CI (GitHub)
 
 **Deploy prod-only:** `deploy-prod.yml` corre automáticamente en cada push a
-`master`/`main` (y por `workflow_dispatch`). No hay GitHub Environments ni
-aprobaciones: todo vive en el repositorio.
+`master`/`main` (y por `workflow_dispatch`). **No hay GitHub Environments ni
+aprobaciones**: todo vive en el repositorio. El `--env prod` que aparece en los
+comandos es el entorno de **Wrangler** (`env.prod` del `wrangler.jsonc`), no un
+Environment de GitHub.
+
+**`wrangler deploy` no aplica secretos.** Los secretos del worker se cargan una
+vez, sobreviven a los deploys y se cambian solo con `wrangler secret put`. Por eso
+los 5 runtime secrets del api viven también como *Repository secrets* y se aplican
+con el workflow **manual** [`sync-secrets.yml`](../.github/workflows/sync-secrets.yml)
+(`target: prod`, `confirm: sync`).
 
 | Nombre | Tipo | Dónde | Uso |
 | --- | --- | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | Repository secret | *Settings → Secrets and variables → Actions → Secrets* | wrangler: migraciones, deploy, status y D1 remoto |
 | `CLOUDFLARE_ACCOUNT_ID` | Repository secret | idem | idem |
+| `BETTER_AUTH_SECRET_STORE` | Repository secret | idem | Se copia al worker api con `sync-secrets` (`wrangler secret put --env prod`) |
+| `BETTER_AUTH_SECRET_CONSOLE` | Repository secret | idem | idem; valor **distinto** de `_STORE` |
+| `INIT_TOKEN` | Repository secret | idem | idem; 32 bytes / 64 hex aleatorio |
+| `RESEND_API_KEY` | Repository secret | idem | idem |
+| `TURNSTILE_SECRET_KEY` | Repository secret | idem | idem |
 | `SMOKE_STORE_HOST` | Repository variable | *Settings → Secrets and variables → Actions → Variables* | Host de la tienda de bajo riesgo para el smoke del storefront (`demo.luisrivas.site`). Sin esquema ni ruta |
 
-No se guardan en el repositorio ni en `.dev.vars`. Solo hay dos workflows en
-`.github/workflows/` (`ci.yml` y `deploy-prod.yml`); no existe `deploy-dev.yml`
-ni ningún Environment. El deploy de prod todavía no se ha ejecutado (sin
-credenciales ni recursos Cloudflare): hasta que el owner cree los dos secrets y
-la variable, el workflow falla de forma visible.
+`TURNSTILE_SITE_KEY` **no** está en esta lista: es pública y vive en
+`apps/commercial/wrangler.jsonc` (`env.prod`).
+
+Nada de esto se guarda en el repositorio ni en `.dev.vars`. Hay tres workflows en
+`.github/workflows/` (`ci.yml`, `deploy-prod.yml` y `sync-secrets.yml`); no existe
+`deploy-dev.yml` ni ningún Environment. Ningún workflow se ha ejecutado todavía
+(sin credenciales ni recursos Cloudflare): hasta que el owner cree los secrets y
+la variable, los workflows fallan de forma visible.
 
 ## Variables de test
 

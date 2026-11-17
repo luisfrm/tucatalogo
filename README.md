@@ -11,8 +11,9 @@ tienda**: se publica en `slug.luisrivas.site`, el dueño la administra en
 
 **Estado actual:** F1 (monorepo), F2 (API y auth), F3 (commercial), F4 (storefront
 y temas), F5 (`/panel-admin`) y F6 (console) están implementados. `docs/` y los
-dos workflows (`ci.yml`, `deploy-prod.yml`) existen; el deploy a Cloudflare y los
-IDs reales siguen pendientes (ver [`docs/deploy.md`](./docs/deploy.md)).
+tres workflows (`ci.yml`, `deploy-prod.yml`, `sync-secrets.yml`) existen; el deploy
+a Cloudflare y los IDs reales siguen pendientes (ver
+[`docs/deploy.md`](./docs/deploy.md)).
 
 ## Stack
 
@@ -316,5 +317,12 @@ Sin validar en este repositorio (no hay credenciales ni deploy):
   sin approval ni Environment. Faltan los repository secrets
   `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` y la repository variable
   `SMOKE_STORE_HOST`; el workflow nunca se ha ejecutado.
+- Secretos de runtime del api: los 5 (`BETTER_AUTH_SECRET_STORE`,
+  `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`,
+  `TURNSTILE_SECRET_KEY`) son **GitHub Repository secrets** y se aplican con el
+  workflow **manual** `sync-secrets` (`wrangler secret put --env prod`).
+  `wrangler deploy` no aplica secretos. No hay GitHub Environments: el `--env prod`
+  es de Wrangler. La `TURNSTILE_SITE_KEY` de prod es pública y vive en
+  `apps/commercial/wrangler.jsonc`.
 - Turnstile y Resend reales (local usa `test` y `memory`).
 - Lighthouse/axe formal sobre dev/prod.

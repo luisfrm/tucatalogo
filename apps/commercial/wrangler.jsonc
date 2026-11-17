@@ -45,10 +45,12 @@
         "ENVIRONMENT": "production",
         "APP_DOMAIN": "luisrivas.site",
         "MEDIA_BASE_URL": "https://tucatalogo-bucket.luisrivas.site",
-        // B9: Turnstile real en prod. La site key la fija el owner; el secret
-        // vive como Worker secret en el api. Sin ambos, el registro da 503.
+        // B9: Turnstile real en prod. La site key es pública y vive aquí (no es
+        // secreta y no va en GitHub); el TURNSTILE_SECRET_KEY es un Worker
+        // secret del api, sincronizado desde un GitHub Repository secret. Sin
+        // ambos, el registro da 503.
         "TURNSTILE_MODE": "enabled",
-        "TURNSTILE_SITE_KEY": "REPLACE_ME_PROD_TURNSTILE_SITE_KEY"
+        "TURNSTILE_SITE_KEY": "0x4AAAAAAAGF7HGDtrRDDGsww"
       },
       "services": [
         {
