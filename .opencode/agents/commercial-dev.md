@@ -21,7 +21,7 @@ Eres desarrollador frontend senior con foco en conversión. Trabajas en `apps/co
   1. Propietario (nombre, correo, contraseña) y tienda (nombre, slug, moneda). Slug validado en vivo: formato, reservados, ocupado y cuarentena.
   2. Tema con preview real desde `packages/themes`.
   3. OTP de 6 caracteres con reenvío (60 s), expiración e intentos agotados.
-  4. Confirmación con enlaces a `slug.luisrivas.site` y a `/panel-admin`.
+  4. Confirmación con enlaces a `slug.tucatalogo.luisrivas.site` y a `/panel-admin`.
 - **Nada se persiste antes del OTP**: la tienda se crea después de verificarlo. El paso 4 reenvía el payload completo (incluida la contraseña) y el servidor revalida email y slug.
 - Turnstile en la petición de OTP, verificado en servidor. Enlaces a términos y privacidad.
 

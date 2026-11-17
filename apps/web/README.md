@@ -21,9 +21,13 @@ hacia `apps/api`.
 
 `app/lib/host.ts` → `resolveStoreSlug(hostname, appDomain, { siteId, allowSiteId })`.
 
-- `slug.luisrivas.site` → slug `slug`.
-- Ápice, `www`, subdominios anidados, hosts ajenos y slugs reservados → 404
-  (la respuesta no distingue tienda inexistente, suspendida o eliminada).
+- `slug.tucatalogo.luisrivas.site` → slug `slug`.
+- El **dominio padre** `luisrivas.site` **no** es una tienda: `mi-tienda.luisrivas.site`
+  no existe por diseño (no hay comodín en `luisrivas.site`; solo hosts exactos para
+  `tucatalogo`, `console-tucatalogo` y `tucatalogo-bucket`).
+- La raíz y `www` de la subzona (`tucatalogo.luisrivas.site`), subdominios anidados,
+  hosts ajenos y slugs reservados → 404 (la respuesta no distingue tienda
+  inexistente, suspendida o eliminada).
 - `?siteId=<slug>` sustituye al host **solo** en `local`/`development`. En
   producción → 400 + log. No otorga permisos: es resolución de host, no un
   `storeId` de confianza.

@@ -1,7 +1,7 @@
 # TuCatálogo – Contexto del proyecto (MVP / Fase 1)
 
 SaaS multitienda de catálogos (zapatos, maquillaje, sandalias). Una cuenta = una tienda.
-Cada tienda vive en `slug.luisrivas.site` con panel en `/panel-admin` y pedido por WhatsApp.
+Cada tienda vive en `slug.tucatalogo.luisrivas.site` con panel en `/panel-admin` y pedido por WhatsApp.
 Plan vigente y detalle de decisiones: **`PLAN.md` (v1.1)**. Los requerimientos v1.0 son baseline.
 
 ## Superficies y hosts
@@ -10,10 +10,13 @@ Plan vigente y detalle de decisiones: **`PLAN.md` (v1.1)**. Los requerimientos v
 | --- | --- | --- |
 | `apps/commercial` | `tucatalogo.luisrivas.site` | Landing + registro multipaso |
 | `apps/console` | `console-tucatalogo.luisrivas.site` | Backoffice SaaS: tiendas, suspensión, borrado, audit |
-| `apps/web` | `*.luisrivas.site` | Storefront **y** `/panel-admin` (panel del dueño) |
+| `apps/web` | `*.tucatalogo.luisrivas.site` | Storefront **y** `/panel-admin` (panel del dueño) |
 | `apps/api` | sin ruta pública | Hono; solo service binding |
 
 - **No existe `apps/panel`**: el panel del dueño son rutas de `apps/web`.
+- **El comodín vive solo en la subzona de tiendas.** `luisrivas.site` no tiene `*`:
+  `tucatalogo` (commercial), `console-tucatalogo` y `tucatalogo-bucket` (R2) son
+  hosts exactos del dominio padre y no se toca ningún otro registro de la zona.
 - Apex y `www` → 301 al commercial (Redirect Rules). R2: `tucatalogo-bucket.luisrivas.site`, host único.
 - Dev: `*-dev.workers.dev` + `?siteId`; sin wildcard.
 

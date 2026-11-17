@@ -3,27 +3,31 @@ import { describe, expect, it } from "vitest";
 import { resolveStoreSlug } from "../app/lib/host";
 
 describe("resolución de host del storefront", () => {
-  it("extrae el slug de un subdominio directo", () => {
-    expect(resolveStoreSlug("mi-tienda.luisrivas.site", "luisrivas.site")).toEqual({
+  const SUBZONE = "tucatalogo.luisrivas.site";
+
+  it("extrae el slug del subdominio de la subzona de tiendas", () => {
+    expect(resolveStoreSlug("mi-tienda.tucatalogo.luisrivas.site", SUBZONE)).toEqual({
       slug: "mi-tienda",
       reason: "ok",
       siteId: null,
     });
   });
 
-  it("no trata el ápice ni www como tienda", () => {
-    expect(resolveStoreSlug("luisrivas.site", "luisrivas.site").reason).toBe("root");
-    expect(resolveStoreSlug("www.luisrivas.site", "luisrivas.site").reason).toBe("root");
+  it("no trata la raíz ni www de la subzona como tienda", () => {
+    expect(resolveStoreSlug(SUBZONE, SUBZONE).reason).toBe("root");
+    expect(resolveStoreSlug(`www.${SUBZONE}`, SUBZONE).reason).toBe("root");
   });
 
   it("rechaza hosts reservados, anidados y de otro dominio", () => {
-    expect(resolveStoreSlug("tucatalogo.luisrivas.site", "luisrivas.site").reason).toBe("reserved");
-    expect(resolveStoreSlug("console-tucatalogo.luisrivas.site", "luisrivas.site").reason).toBe(
-      "reserved",
-    );
-    expect(resolveStoreSlug("a.b.luisrivas.site", "luisrivas.site").reason).toBe("invalid");
-    expect(resolveStoreSlug("otro-dominio.com", "luisrivas.site").reason).toBe("invalid");
-    expect(resolveStoreSlug("Bad_Slug.luisrivas.site", "luisrivas.site").reason).toBe("invalid");
+    expect(resolveStoreSlug(`admin.${SUBZONE}`, SUBZONE).reason).toBe("reserved");
+    expect(resolveStoreSlug(`panel.${SUBZONE}`, SUBZONE).reason).toBe("reserved");
+    // El dominio padre no es una tienda: `mi-tienda.luisrivas.site` no existe
+    // por diseño (no hay comodín en luisrivas.site).
+    expect(resolveStoreSlug("mi-tienda.luisrivas.site", SUBZONE).reason).toBe("invalid");
+    expect(resolveStoreSlug("console-tucatalogo.luisrivas.site", SUBZONE).reason).toBe("invalid");
+    expect(resolveStoreSlug(`a.b.${SUBZONE}`, SUBZONE).reason).toBe("invalid");
+    expect(resolveStoreSlug("otro-dominio.com", SUBZONE).reason).toBe("invalid");
+    expect(resolveStoreSlug(`Bad_Slug.${SUBZONE}`, SUBZONE).reason).toBe("invalid");
   });
 
   it("acepta el subdominio local de una tienda", () => {

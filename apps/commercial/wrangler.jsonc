@@ -43,7 +43,7 @@
       "preview_urls": false,
       "vars": {
         "ENVIRONMENT": "production",
-        "APP_DOMAIN": "luisrivas.site",
+        "APP_DOMAIN": "tucatalogo.luisrivas.site",
         "MEDIA_BASE_URL": "https://tucatalogo-bucket.luisrivas.site",
         // B9: Turnstile real en prod. La site key es pública y vive aquí (no es
         // secreta y no va en GitHub); el TURNSTILE_SECRET_KEY es un Worker

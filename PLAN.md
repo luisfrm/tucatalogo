@@ -27,7 +27,7 @@ Verificado en disco:
 
 - Monorepo pnpm con `apps/api`, `apps/web`, `apps/commercial`, `apps/console` y los siete paquetes.
 - F1 (monorepo), F2 (API y auth), F3 (commercial), F4 (storefront y temas), F5 (`/panel-admin`) y F6 (console) implementados. `docs/` y los tres workflows (`ci.yml`, `deploy-prod.yml`, `sync-secrets.yml`) existen.
-- **Pendiente cloud:** IDs reales de D1, hosts de `env.dev`, `TURNSTILE_SITE_KEY` de dev (la de prod ya está en `apps/commercial/wrangler.jsonc`), gate del custom domain de R2 y el primer deploy real. Ningún workflow se ha ejecutado.
+- **Pendiente cloud:** hosts de `env.dev`, `TURNSTILE_SITE_KEY` de dev (la de prod ya está en `apps/commercial/wrangler.jsonc`), DNS de la subzona `tucatalogo.luisrivas.site`, permiso de rutas del token y el deploy completo de los frontends. D1/R2 de prod y los 5 secrets del worker api ya están hechos.
 - Scripts reales en `package.json`: `pnpm dev` (`:api`, `:web`, `:commercial`, `:console`), `build`, `lint`, `typecheck`, `test`, `db:migrate:local`, `db:seed:local`. No existe `db:migrate:<env>`.
 
 Los comandos de este plan son los que existen hoy en `package.json` o los que ejecutan los workflows; el detalle operativo está en `README.md` y `docs/*`.
@@ -52,7 +52,7 @@ Los comandos de este plan son los que existen hoy en `package.json` o los que ej
 | **D3** | Ciclo de vida de tienda con `status` (`pending` \| `active` \| `suspended`), `suspendedBy` (`owner` \| `admin`) y `suspendedReason`. **Sin `isActive` en `store`.** Owner solo reactiva si `suspendedBy = owner`; console reactiva siempre. Eliminar = hard delete (D1 + R2 + `store_users`) + cuarentena de slug 90 días. | Suspensión y borrado son operaciones distintas, auditables y con permisos distintos |
 | **D4** | Registro **sin persistir nada** hasta verificar el OTP. `signup_intent` guarda email, hash del OTP, intentos y expiración; **nunca la contraseña**. El paso 1 pide nombre, email, contraseña, nombre de tienda, slug y moneda; el slug se valida en vivo y se revalida al crear. Sin tienda `pending` ni purga a 24 h. | La creación es un único acto atómico post-OTP; no hay basura que limpiar |
 | **D5** | Imágenes: entrada máxima 2 MB; normalización **en el navegador** a WebP full 1600 px + thumb 600 px; EXIF eliminado. Hero con par desktop/mobile. Topes: 8 imágenes por producto, 10 slides de hero. | El servidor no procesa imágenes: valida y almacena. Coste de CPU y de R2 acotado |
-| **D6** | Hosts: commercial `tucatalogo.luisrivas.site`; console `console-tucatalogo.luisrivas.site`; web `*.luisrivas.site` (storefront + `/panel-admin`); API solo por service binding; R2 en `tucatalogo-bucket.luisrivas.site`. Apex y `www` → 301 al commercial con Redirect Rules. Dev: `*-dev.workers.dev` + `?siteId`, sin wildcard. | La ruta wildcard convive con hosts exactos; el bucket no puede quedar interceptado por el wildcard |
+| **D6** | Hosts: commercial `tucatalogo.luisrivas.site`; console `console-tucatalogo.luisrivas.site`; web `*.tucatalogo.luisrivas.site` (storefront + `/panel-admin`); API solo por service binding; R2 en `tucatalogo-bucket.luisrivas.site`. Apex y `www` → 301 al commercial con Redirect Rules. **No hay comodín en `luisrivas.site`.** Dev: `*-dev.workers.dev` + `?siteId`, sin wildcard. | El wildcard vive solo en la subzona de tiendas; commercial, console y el bucket son hosts exactos del dominio padre y no pueden quedar interceptados |
 
 ### 2.2 Políticas no negociables (P1–P7)
 
@@ -74,7 +74,7 @@ Cada fila sustituye el texto de la v1.0. No se reescribe el documento original (
 
 | # | v1.0 decía | v1.1 establece |
 | --- | --- | --- |
-| 1 | `apps/panel` con ruta `*.luisrivas.site/panel-admin/*` | `apps/panel` **no existe**. `/panel-admin` son rutas de `apps/web`. Se añade `apps/console` como backoffice SaaS |
+| 1 | `apps/panel` con ruta `*.tucatalogo.luisrivas.site/panel-admin/*` | `apps/panel` **no existe**. `/panel-admin` son rutas de `apps/web`. Se añade `apps/console` como backoffice SaaS |
 | 2 | Una tabla `user` / `session` / `account` / `verification` | Dos reinos y dos juegos de tablas: `store_*` y `admin_*` (+ `admin_two_factor`). Sin tabla compartida |
 | 3 | `store.status` + `store.isActive` | `status` (`pending`\|`active`\|`suspended`) + `suspendedBy` + `suspendedReason`. **Se elimina `isActive`** |
 | 4 | Tienda nace `pending`, pasa a `active` al verificar OTP; purga a 24 h | Se crea **después** del OTP y nace `active`. No hay tiendas pendientes ni purga. `signup_intent` es el único registro temporal. Slug en el paso 1 |
@@ -115,18 +115,19 @@ Regla de ubicación (P3): `constants/*.ts` y `libs/*.ts` que se usan 2+ veces **
 
 | Host / ruta | Destino | Notas |
 | --- | --- | --- |
-| `tucatalogo.luisrivas.site/*` | Worker `commercial` | Host exacto, gana sobre el wildcard |
+| `tucatalogo.luisrivas.site/*` | Worker `commercial` | Host exacto del dominio padre (allí no hay wildcard) |
 | `console-tucatalogo.luisrivas.site/*` | Worker `console` | Host exacto; reino `admin` |
-| `*.luisrivas.site/*` | Worker `web` | Storefront y `/panel-admin` de cada tienda |
+| `*.tucatalogo.luisrivas.site/*` | Worker `web` | Storefront y `/panel-admin` de cada tienda |
 | — | Worker `api` | **Sin ruta pública**; solo service binding |
 | `tucatalogo-bucket.luisrivas.site/*` | R2 custom domain | Host único de imágenes; es el valor prod de `MEDIA_BASE_URL` |
 | `luisrivas.site/*`, `www.luisrivas.site/*` | Redirect Rule 301 → commercial | Fuera de Workers |
 
 Reglas de convivencia:
 
-1. Cloudflare prioriza la ruta más específica (host exacto) sobre el wildcard. `tucatalogo`, `console-tucatalogo` y `tucatalogo-bucket` **no** deben llegar nunca a `web`.
-2. Defensa en profundidad: `web` valida el slug contra la lista de reservados y responde 404 con log si recibe un host que no le corresponde.
-3. **F0 debe verificar empíricamente** que el wildcard no intercepta el custom domain de R2. Si lo intercepta, no se publica el bucket hasta resolverlo (no hay host alternativo, §12).
+1. **No existe comodín en `luisrivas.site`**: el wildcard vive solo en la subzona de tiendas (`*.tucatalogo.luisrivas.site`). `tucatalogo`, `console-tucatalogo` y `tucatalogo-bucket` son hosts exactos del dominio padre y ningún otro proyecto de la zona se ve afectado.
+2. Cloudflare prioriza la ruta más específica (host exacto) sobre el wildcard; además `*.tucatalogo.luisrivas.site` **no puede** casar con `tucatalogo-bucket.luisrivas.site`, porque el primer nivel del host es distinto.
+3. Defensa en profundidad: `web` valida el slug contra la lista de reservados y responde 404 con log si recibe un host que no le corresponde (incluido el dominio padre).
+4. **Gate F0: resuelto por diseño.** El bucket R2 y los frontends viven en el dominio padre; el worker `web` solo enruta la subzona, así que el wildcard no puede interceptar el media host. Se mantiene la comprobación empírica (`curl -sSI https://tucatalogo-bucket.luisrivas.site/` → 404 `text/plain` de R2, no el HTML del storefront) como test de regresión, no como bloqueo.
 
 ### 4.3 Rutas internas (estado real)
 
@@ -160,13 +161,13 @@ console ────┘                          └─ R2 (por entorno)
 2. Paso 2: tema con preview real (`packages/themes`, mismo render que el storefront).
 3. Paso 3: `POST /auth/store/signup/otp` {email, slug, turnstileToken}. El API valida Turnstile, formato y disponibilidad, crea `signup_intent` (email, hash del OTP, `attempts = 0`, `expires_at = now + 10 min`) y envía el código de 6 caracteres por Resend. Reenvío con espera de 60 s y límite por hora.
 4. Paso 4: `POST /auth/store/signup` con **el payload completo otra vez** + código. El API verifica el intent (expiración, intentos, hash), lo consume en una transacción, **revalida email y slug** (las constraints únicas son la última palabra), crea `store_users` + `store` con `status = active` y devuelve la confirmación con enlaces a la tienda y a `/panel-admin`.
-5. La contraseña **no se persiste nunca** antes de este último paso: viaja solo en el formulario y en ese POST. El OTP no crea sesión: la cookie de tienda solo puede fijarse en el host de la tienda, así que el dueño inicia sesión en `slug.luisrivas.site/panel-admin/login`.
+5. La contraseña **no se persiste nunca** antes de este último paso: viaja solo en el formulario y en ese POST. El OTP no crea sesión: la cookie de tienda solo puede fijarse en el host de la tienda, así que el dueño inicia sesión en `slug.tucatalogo.luisrivas.site/panel-admin/login`.
 
 **B. Login de tienda**
 
-1. `slug.luisrivas.site/panel-admin/login` → action same-origin → `POST /auth/store/login`.
+1. `slug.tucatalogo.luisrivas.site/panel-admin/login` → action same-origin → `POST /auth/store/login`.
 2. El API resuelve la tienda desde `x-store-slug` (cabecera que fija el worker que atiende el host; para resolver la tienda no usa el body ni `?siteId`), autentica contra Better Auth `store` y exige `store.owner_id === user.id`. Si el usuario no es dueño de esa tienda → 403 (no se filtra si el email existe). En dev/local el worker frontal resuelve antes el `?siteId`, pero la comprobación de propiedad no cambia.
-3. Cookie host-only con prefijo `store` en `slug.luisrivas.site`. Sin `domain=.luisrivas.site`.
+3. Cookie host-only con prefijo `store` en `slug.tucatalogo.luisrivas.site`. Sin `domain=.luisrivas.site`.
 4. Logout borra la sesión en D1 y la cookie. Sesión inválida/expirada → redirect a login desde el loader.
 
 **C. Login de console**
@@ -178,7 +179,7 @@ console ────┘                          └─ R2 (por entorno)
 
 **D. Storefront**
 
-1. Request a `slug.luisrivas.site/*` → worker `web`.
+1. Request a `slug.tucatalogo.luisrivas.site/*` → worker `web`.
 2. El loader extrae el slug del `Host` (o `?siteId` en dev, §20), lo normaliza y lo valida contra formato y reservados.
 3. `GET /public/:slug/store` → si no existe, está `suspended` o fue eliminada: **404** sin distinguir el motivo en la respuesta.
 4. El loader pide hero y primera página de productos; el injector SSR resuelve el tema y el color en el `<head>` antes del primer pintado.
@@ -497,7 +498,7 @@ audit_log (action, created_at DESC)
 | Base path | `/auth/store/*` | `/auth/console/*` |
 | Prefijo de cookie | `store` | `console` |
 | Secreto | `BETTER_AUTH_SECRET_STORE` | `BETTER_AUTH_SECRET_CONSOLE` |
-| Host | `slug.luisrivas.site` | `console-tucatalogo.luisrivas.site` |
+| Host | `slug.tucatalogo.luisrivas.site` | `console-tucatalogo.luisrivas.site` |
 | 2FA | No | TOTP obligatorio + backup codes |
 | Reset | Email (Resend) | Email (Resend) |
 | UI de gestión | No | No (solo `/init`) |
@@ -964,7 +965,7 @@ Regla: **ningún fallo se oculta con un valor por defecto**. Si falta algo, se f
 | Turnstile no disponible | El registro no continúa | 503 |
 | Resend falla al enviar OTP | Mensaje de reintento; el intent no se marca como enviado | 502 |
 | Slug inválido o reservado | 404 en storefront / 400 en formulario | 404/400 |
-| Wildcard intercepta el host de R2 | Gate de F0: no se publica; **no** se usa un host alternativo | — |
+| Wildcard intercepta el host de R2 | Gate de F0: **imposible por diseño** (el wildcard está en la subzona, el bucket en el padre); se mantiene `curl` de regresión | - |
 | Tienda suspendida | 404 en storefront (sin revelar el motivo); `/panel-admin` sigue accesible con banner | 404 |
 | Reintentar suspensión ya suspendida | Idempotente, actualiza motivo y audita | 200 |
 | Sin número de WhatsApp | El botón no se muestra (estado nulo previsto, no fallback) | — |
@@ -982,7 +983,7 @@ Errores de entrada = 4xx. Errores graves (config, infraestructura, corrupción) 
 | Worker | dev | prod |
 | --- | --- | --- |
 | `api` | `tucatalogo-api-dev` | `tucatalogo-api-prod`, sin ruta pública |
-| `web` | `tucatalogo-web-dev` + `?siteId` | rutas `*.luisrivas.site/*` |
+| `web` | `tucatalogo-web-dev` + `?siteId` | rutas `*.tucatalogo.luisrivas.site/*` |
 | `commercial` | `tucatalogo-commercial-dev` | `tucatalogo.luisrivas.site/*` |
 | `console` | `tucatalogo-console-dev` | `console-tucatalogo.luisrivas.site/*` |
 
@@ -1009,7 +1010,7 @@ principal.
 - Un fallo de migración detiene el deploy antes de desplegar código.
 - **API sin host público:** el smoke no puede hacer `curl` a `/health` del API. El workflow comprueba `wrangler deployments status` (deployment activo) y `d1 execute … SELECT 1` (D1 remoto); `/health` del API se ejercita en tests y en local. Un smoke real por service binding requiere una ruta en un frontend que llame al API (trabajo de F7 de las apps).
 - **Credenciales en dos niveles:** `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` son *repository secrets* (accesibles desde cualquier job con Environment); los 5 runtime secrets del api son *Environment secrets* de `prod`; `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST` son *Environment variables* de `prod` (`SMOKE_STORE_HOST` también vale a nivel de repo). El Environment `dev` existe y no se usa.
-- **`SMOKE_STORE_HOST` con fallback de CI:** si la variable no existe, el smoke apunta a `demo.luisrivas.site` para no tumbar el deploy. Es un fallback de CI, no de runtime: el owner debe crear la variable cuando tenga una tienda real de bajo riesgo.
+- **`SMOKE_STORE_HOST` con fallback de CI:** si la variable no existe, el smoke apunta a `demo.tucatalogo.luisrivas.site` para no tumbar el deploy. Es un fallback de CI, no de runtime: el owner debe crear la variable cuando tenga una tienda real de bajo riesgo.
 - **Secretos ≠ deploy:** `wrangler deploy` no aplica secretos. `deploy-prod.yml` es **solo deploy** y no duplica el sync; los 5 runtime secrets del api se aplican con el workflow **manual** `sync-secrets.yml` (`wrangler secret put --env prod`). Ojo con la homonimia: `--env prod` es el entorno de **Wrangler**, `environment: prod` es el de **GitHub**.
 - **Estado real:** `ci.yml` corre en PR/push; `deploy-prod.yml` y `sync-secrets.yml` no se han ejecutado nunca. Recursos ya creados: zona `luisrivas.site`, D1 `tucatalogo-prod` (`ed32bca0-2ed9-4a07-97e5-018e8a15049f`) y R2 `tucatalogo-media-prod`.
 - Scripts reales: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm db:migrate:local` y `pnpm db:seed:local`. Las migraciones remotas se ejecutan con `wrangler d1 migrations apply <db> --remote --env <env>` desde el workflow (no hay script `db:migrate:<env>`).
@@ -1048,7 +1049,7 @@ deploy automático no toca secretos y no los borra.
 | `RESEND_API_KEY` | Environment secret (`prod`) → Worker secret (api), por `sync-secrets` | Owner |
 | `TURNSTILE_SECRET_KEY` | Environment secret (`prod`) → Worker secret (api), por `sync-secrets` | Owner |
 | `INIT_TOKEN` | Environment secret (`prod`) → Worker secret (**solo** `api`), por `sync-secrets` | Owner, generado aleatorio |
-| `SMOKE_STORE_HOST` | Environment variable (`prod`) —también admite Repository variable— (no secreta) | Owner: host de la tienda de bajo riesgo para el smoke de prod. Sin ella el workflow usa `demo.luisrivas.site` |
+| `SMOKE_STORE_HOST` | Environment variable (`prod`) —también admite Repository variable— (no secreta) | Owner: host de la tienda de bajo riesgo para el smoke de prod. Sin ella el workflow usa `demo.tucatalogo.luisrivas.site` |
 | `TURNSTILE_SITE_KEY` | Variable pública de `apps/commercial/wrangler.jsonc` (`env.prod`); copia informativa como Environment variable (`prod`) | Owner; no es secreta. El valor que usa el widget es el del `wrangler.jsonc` |
 | `MEDIA_BASE_URL` | Variable por entorno (**un solo valor**) | Owner. Valores en el cuadro siguiente |
 
@@ -1121,7 +1122,7 @@ Regla: ningún test depende de datos de producción. Los E2E crean sus propias t
 
 | # | Criterio | Verificación |
 | --- | --- | --- |
-| 1 | Registro en commercial → OTP → tienda `active` accesible en `slug.luisrivas.site` en prod, sin intervención manual | E2E en dev + prueba manual en prod |
+| 1 | Registro en commercial → OTP → tienda `active` accesible en `slug.tucatalogo.luisrivas.site` en prod, sin intervención manual | E2E en dev + prueba manual en prod |
 | 2 | Login en `/panel-admin`, 10 productos con varias imágenes, hero con 2+ slides (desktop y mobile) visibles en la tienda | E2E + revisión visual |
 | 3 | Recuperación de contraseña de extremo a extremo | E2E con bandeja de prueba |
 | 4 | Cambio de tema y color principal: los 5 temas en claro y oscuro, sin parpadeo | Revisión + captura de HTML inicial (CSS en `<head>`) + axe |
@@ -1177,7 +1178,7 @@ Hitos de control: al cerrar F1 (esqueleto desplegado en dev), al cerrar F2 (auth
 
 | # | Riesgo | Impacto | Mitigación |
 | --- | --- | --- | --- |
-| 1 | El custom domain de R2 (`tucatalogo-bucket`) queda interceptado por el wildcard de `web` | Imágenes rotas o servidas por el worker equivocado | Gate de F0 con prueba real; sin fallback a `cdn.`; si falla, no se publica el bucket hasta resolver |
+| 1 | El custom domain de R2 (`tucatalogo-bucket`) queda interceptado por el wildcard de `web` | Imágenes rotas o servidas por el worker equivocado | **Eliminado por diseño**: el wildcard vive en `*.tucatalogo.luisrivas.site` y el bucket en `luisrivas.site`, así que no pueden casar. `curl` de regresión tras cada deploy |
 | 2 | Dos instancias Better Auth con cookies host-only y relay a través del worker | Sesiones que no persisten o se cruzan | Spike F0 con prueba de login/logout en ambos reinos; prefijos y secretos separados; tests de aislamiento |
 | 3 | 2FA TOTP en Workers (cripto y generación de secreto) | Bloquea el console | Spike F0 contra Web Crypto; backup codes; test de recuperación |
 | 4 | React Router v8 framework mode no estable o con fricción en Workers | Reescritura de frontend | Verificar versión estable en F0 antes de fijar dependencias; ADR con la conclusión |
@@ -1198,14 +1199,14 @@ Hitos de control: al cerrar F1 (esqueleto desplegado en dev), al cerrar F2 (auth
 Antes de F1:
 
 1. Zona `luisrivas.site` activa en Cloudflare.
-2. Registro wildcard `*` **proxied** y capacidad de crear rutas de Worker por host.
+2. Registro wildcard `*` **proxied en la subzona** (`*.tucatalogo.luisrivas.site`) y capacidad de crear rutas de Worker por host. Sin comodín en `luisrivas.site`.
 3. Plan **Workers Paid** activo (necesario para el volumen de CPU y los límites de R2 del proyecto).
 4. Token de API de Cloudflare con permisos de Workers (scripts y rutas), D1 y R2, más lectura de zona. Guardado como repository secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`.
 5. Resend con el dominio de envío verificado (SPF/DKIM) y una API key.
 6. Turnstile: site key (pública, en `apps/commercial/wrangler.jsonc`) y secret key (secreto del api) creadas para los hosts del registro.
 7. Repositorio en GitHub con los repository secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`, y un GitHub Environment `prod` (sin reglas de protección ni aprobaciones) con los 5 runtime secrets del api como *Environment secrets* (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`) y las variables `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST`. Deploy prod-only; los runtime secrets se aplican con el workflow manual `sync-secrets`.
 8. `INIT_TOKEN` generado (aleatorio, ≥ 32 bytes) y guardado como Environment secret de `prod`; no se versiona.
-9. **Validar `tucatalogo-bucket.luisrivas.site`**: crear el custom domain de R2 y comprobar que el wildcard de `web` no lo intercepta. Es un gate de F0, no de F1. Estado: bucket creado, custom domain **pendiente** (el hostname aún no resuelve).
+9. **`tucatalogo-bucket.luisrivas.site`**: custom domain de R2 **creado y sirviendo** (`404 text/plain` de R2, TLS OK). El gate de F0 queda **resuelto por diseño** porque el wildcard de `web` vive en la subzona `*.tucatalogo.luisrivas.site` y no puede casar con el host del bucket en el dominio padre. Falta revalidar con `curl` cuando la subzona tenga DNS.
 10. Cuentas de correo de prueba y un buzón accesible para E2E de OTP y reset.
 
 ---

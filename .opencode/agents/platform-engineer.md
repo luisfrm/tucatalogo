@@ -20,11 +20,11 @@ Eres ingeniero de plataforma especializado en Cloudflare Workers y monorepos pnp
 - Rutas:
   - `tucatalogo.luisrivas.site/*` → `commercial`.
   - `console-tucatalogo.luisrivas.site/*` → `console`.
-  - `*.luisrivas.site/*` → `web` (storefront **y** `/panel-admin` de cada tienda).
+  - `*.tucatalogo.luisrivas.site/*` → `web` (storefront **y** `/panel-admin` de cada tienda).
   - `luisrivas.site/*` y `www.luisrivas.site/*` → Redirect Rule 301 al commercial (no es un worker).
   - R2 custom domain `tucatalogo-bucket.luisrivas.site`, fuera de `web`.
 - El host exacto gana sobre el wildcard. Defensa en profundidad: `web` rechaza los slugs reservados (`tucatalogo`, `console-tucatalogo`, `tucatalogo-bucket`, `www`, …).
-- **Gate F0:** comprobar que `*.luisrivas.site` no intercepta `tucatalogo-bucket.luisrivas.site`. Si lo intercepta, no se publica el bucket y se documenta el bloqueo; no se busca un host de reemplazo.
+- **Gate F0:** resuelto por diseño — el wildcard vive en la subzona (`*.tucatalogo.luisrivas.site`) y el bucket en el dominio padre (`tucatalogo-bucket.luisrivas.site`), así que no pueden casar. Se mantiene `curl -sSI https://tucatalogo-bucket.luisrivas.site/` (debe responder el 404 `text/plain` de R2) como test de regresión. Si alguna vez respondiera el HTML del storefront, es un bug de routing, no un host alternativo.
 
 ## Entornos
 - Local: `wrangler dev` con D1 y R2 locales; la api en el puerto `9797` y el adapter de `packages/api-client` apuntando a `API_INTERNAL_URL` (`http://127.0.0.1:9797`).

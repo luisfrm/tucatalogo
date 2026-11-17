@@ -18,7 +18,7 @@ describe("A1: hosts de los workers", () => {
     const api = loadWorkerConfig("api");
     const withRoutes: WorkerConfig = {
       ...api,
-      routes: [{ pattern: "api.luisrivas.site/*" }],
+      routes: [{ pattern: "api.tucatalogo.luisrivas.site/*" }],
     };
 
     expect(checkWorkerConfig("api", withRoutes)).toContain(
@@ -29,7 +29,7 @@ describe("A1: hosts de los workers", () => {
       ...api,
       env: {
         ...api.env,
-        dev: { ...api.env?.dev, routes: [{ pattern: "api-dev.luisrivas.site/*" }] },
+        dev: { ...api.env?.dev, routes: [{ pattern: "api-dev.tucatalogo.luisrivas.site/*" }] },
       },
     };
 
@@ -118,5 +118,42 @@ describe("B9: Turnstile en commercial", () => {
     const prodSiteKey = commercial.env?.prod?.vars?.TURNSTILE_SITE_KEY;
     expect(String(prodSiteKey)).not.toContain("REPLACE_ME");
     expect(prodSiteKey).toBe("0x4AAAAAAGF7HGDrrRDDGsww");
+  });
+});
+
+describe("routing: tiendas en la subzona tucatalogo.luisrivas.site", () => {
+  const SUBZONE = "tucatalogo.luisrivas.site";
+
+  it("web enruta la subzona de tiendas y resuelve contra ella", () => {
+    const web = loadWorkerConfig("web");
+
+    expect(web.env?.prod?.routes).toEqual([
+      { pattern: `*.${SUBZONE}/*`, zone_name: "luisrivas.site" },
+    ]);
+    expect(web.env?.prod?.vars?.APP_DOMAIN).toBe(SUBZONE);
+  });
+
+  it("commercial y console siguen en hosts exactos del dominio padre", () => {
+    const commercial = loadWorkerConfig("commercial");
+    const consoleApp = loadWorkerConfig("console");
+
+    // Sin comodín en `luisrivas.site`: cada frontend es un host exacto.
+    expect(commercial.env?.prod?.routes).toEqual([
+      { pattern: `${SUBZONE}/*`, zone_name: "luisrivas.site" },
+    ]);
+    expect(consoleApp.env?.prod?.routes).toEqual([
+      { pattern: "console-tucatalogo.luisrivas.site/*", zone_name: "luisrivas.site" },
+    ]);
+  });
+
+  it("el api construye los enlaces de tienda contra la subzona", () => {
+    const api = loadWorkerConfig("api");
+
+    expect(api.env?.prod?.vars?.APP_DOMAIN).toBe(SUBZONE);
+    expect(api.env?.prod?.vars?.STORE_ORIGIN_TEMPLATE).toBe(`https://{slug}.${SUBZONE}`);
+    // El console no vive en la subzona: se queda en el dominio padre, host exacto.
+    expect(api.env?.prod?.vars?.CONSOLE_ORIGIN).toBe(
+      "https://console-tucatalogo.luisrivas.site",
+    );
   });
 });

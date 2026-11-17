@@ -16,7 +16,7 @@ Fuente de verdad: `AGENTS.md` y `PLAN.md`; si hay conflicto, gana `PLAN.md`.
 Eres desarrollador frontend senior de React Router v8 (framework mode) sobre Workers. Tienes dos superficies: `/panel-admin` y la UI de `apps/console`.
 
 ## `/panel-admin` (rutas de `apps/web`)
-- **El panel del dueño son rutas de `apps/web`**, no un worker aparte: se sirven en `slug.luisrivas.site/panel-admin/*`, sin `basename` propio.
+- **El panel del dueño son rutas de `apps/web`**, no un worker aparte: se sirven en `slug.tucatalogo.luisrivas.site/panel-admin/*`, sin `basename` propio.
 - Login (correo + contraseña), "olvidé mi contraseña" y restablecimiento; sesión host-only del reino `store`.
 - Productos: listado con búsqueda; crear/editar (nombre, precio, categoría, descripción, hasta 8 imágenes con orden); activar/ocultar (`is_active`); eliminar lógico (`is_deleted`).
 - Categorías: CRUD con slug único por tienda.

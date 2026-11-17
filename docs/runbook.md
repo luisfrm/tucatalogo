@@ -214,7 +214,7 @@ los `store.id` de D1. El listado de objetos se hace desde el dashboard de R2
 El 404 del storefront es **idéntico** para tienda inexistente, suspendida,
 eliminada o slug inválido: la respuesta no revela el motivo. Diagnóstico:
 
-1. **Host correcto.** `slug.luisrivas.site` (un subdominio directo). El ápice,
+1. **Host correcto.** `slug.tucatalogo.luisrivas.site` (un subdominio directo). El ápice,
    `www`, subdominios anidados y hosts ajenos no son tiendas.
 2. **Slug reservado.** Lista canónica en
    `packages/shared/src/constants/reserved-slugs.ts` (`www`, `api`, `panel`,
@@ -371,7 +371,7 @@ deshacer por completo: D1 vuelve atrás, los objetos de R2 no.
 | Registro: "no pudimos enviar el correo" (502) | Resend rechazó el envío (clave, remitente o dominio) | Revisa el log del API (`Resend rechazó el envío` con status), verifica SPF/DKIM y `RESEND_API_KEY`; el intent no se marca como enviado, el usuario puede reintentar |
 | Registro: 503 sin más | Falta configuración (`EMAIL_DRIVER`, `RESEND_API_KEY`/remitente, `TURNSTILE_MODE`) | Log del API con el nombre de la variable; corrige `wrangler.jsonc`/secreto; no hay fallback |
 | Registro: "no pudimos verificar que no eres un robot" | Token de Turnstile ausente, caducado o rechazado; o `TURNSTILE_SECRET_KEY` mal | 400 es del token (se pide uno nuevo en el paso); 503 es configuración. En local usa `TURNSTILE_MODE=test` |
-| Imágenes 404 con la fila en D1 | Wildcard interceptando el custom domain de R2, o `MEDIA_BASE_URL` apuntando a otro host | `curl -I` al host de media; si responde el 404 del storefront, aplica el gate de R2 (§deploy) y no publiques el bucket |
+| Imágenes 404 con la fila en D1 | `MEDIA_BASE_URL` apuntando a otro host, objeto ausente en R2 o custom domain desactivado | `curl -I` al host de media: debe responder el 404 `text/plain` de R2. Si responde el HTML del storefront, hay un worker mal enrutado |
 | `/health` 503 en un frontend | Falta `ENVIRONMENT` o `APP_DOMAIN` | Corrige `vars` del entorno y redespliega |
 | Tienda 404 tras un deploy | Storefront sirviendo otro worker/host o tienda suspendida | Sigue §7; comprueba rutas y `status` |
 | 429 inesperado en pruebas | Contador de rate limit vigente | §9; borra el bucket afectado solo en local o con justificación |

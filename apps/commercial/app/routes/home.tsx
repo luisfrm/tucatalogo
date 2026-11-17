@@ -75,7 +75,7 @@ const FAQ = [
   {
     question: "¿Necesito comprar un dominio?",
     answer:
-      "No. Tu tienda queda publicada en tu-slug.luisrivas.site y ese es el enlace que compartes. No hay que configurar DNS ni certificados.",
+      "No. Tu tienda queda publicada en tu-slug.tucatalogo.luisrivas.site y ese es el enlace que compartes. No hay que configurar DNS ni certificados.",
   },
   {
     question: "¿Cómo llegan los pedidos?",
@@ -212,7 +212,7 @@ export default function Home() {
                   <span className="size-2 rounded-full bg-border-strong" />
                   <span className="size-2 rounded-full bg-border-strong" />
                   <span className="ml-2 truncate text-[10px] text-text-muted">
-                    mi-tienda.luisrivas.site
+                    mi-tienda.tucatalogo.luisrivas.site
                   </span>
                 </div>
                 {heroTheme ? (

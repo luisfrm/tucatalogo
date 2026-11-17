@@ -38,7 +38,7 @@
       "preview_urls": false,
       "vars": {
         "ENVIRONMENT": "production",
-        "APP_DOMAIN": "luisrivas.site",
+        "APP_DOMAIN": "tucatalogo.luisrivas.site",
         "MEDIA_BASE_URL": "https://tucatalogo-bucket.luisrivas.site"
       },
       "services": [
@@ -49,7 +49,7 @@
       ],
       "routes": [
         {
-          "pattern": "*.luisrivas.site/*",
+          "pattern": "*.tucatalogo.luisrivas.site/*",
           "zone_name": "luisrivas.site"
         }
       ]
