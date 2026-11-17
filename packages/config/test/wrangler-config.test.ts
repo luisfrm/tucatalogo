@@ -106,14 +106,17 @@ describe("B9: Turnstile en commercial", () => {
     expect(commercial.env?.prod?.vars?.TURNSTILE_MODE).toBe("enabled");
   });
 
-  it("dev y prod llevan placeholders explícitos de site key", () => {
+  it("dev sigue con placeholder y prod lleva la site key pública real", () => {
     const commercial = loadWorkerConfig("commercial");
 
     expect(commercial.env?.dev?.vars?.TURNSTILE_SITE_KEY).toBe(
       "REPLACE_ME_DEV_TURNSTILE_SITE_KEY",
     );
-    expect(commercial.env?.prod?.vars?.TURNSTILE_SITE_KEY).toBe(
-      "REPLACE_ME_PROD_TURNSTILE_SITE_KEY",
-    );
+
+    // La site key de Turnstile es pública: el valor canónico vive en
+    // `wrangler.jsonc` (env.prod), nunca en GitHub. prod ya no admite placeholders.
+    const prodSiteKey = commercial.env?.prod?.vars?.TURNSTILE_SITE_KEY;
+    expect(String(prodSiteKey)).not.toContain("REPLACE_ME");
+    expect(prodSiteKey).toBe("0x4AAAAAAAGF7HGDtrRDDGsww");
   });
 });
