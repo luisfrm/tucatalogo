@@ -9,3 +9,18 @@ onlyBuiltDependencies:
   - esbuild
   - sharp
   - workerd
+
+# Gate de seguridad del deploy (`pnpm audit --prod --audit-level=high`, ver
+# docs/deploy.md). Las excepciones son puntuales, documentadas y caducan.
+# pnpm 10 lee `auditConfig.ignoreGhsas` para GHSA (ignoreCves espera CVE).
+auditConfig:
+  ignoreGhsas:
+    # picomatch ReDoS (GHSA-fc5q-39xc-vjpf). No existe versión parcheada
+    # ("Patched versions: <0.0.0"; 4.0.7 es la última publicada), así que el gate
+    # quedaría rojo de forma indefinida. Cadena:
+    # `apps/api > better-auth > vitest > picomatch`: `vitest` es devDependency de
+    # `apps/api` y solo entra en el grafo de `--prod` porque satisface un
+    # peerDependency de `better-auth`. No se importa en el worker, no viaja en el
+    # bundle y no procesa patrones de usuario en runtime: sin superficie de ataque.
+    # RETIRAR esta entrada en cuanto picomatch publique una versión > 4.0.7.
+    - GHSA-fc5q-39xc-vjpf

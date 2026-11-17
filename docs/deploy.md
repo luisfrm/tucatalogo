@@ -285,6 +285,12 @@ workflow solo construye y despliega `env.prod`.
   lleva `[skip ci]` en el mensaje no se ejecuta. Tampoco corre desde PR.
 - `pnpm audit --prod --audit-level=high` corre en el workflow: si aparece una
   vulnerabilidad high/critical o la consulta falla, el deploy falla visible.
+  Excepciones puntuales viven en `pnpm-workspace.yaml` → `auditConfig.ignoreGhsas`
+  (pnpm 10 lee `ignoreGhsas` para GHSA; `ignoreCves` espera CVE), siempre con el
+  motivo escrito al lado y una fecha de caducidad implícita: se retiran cuando la
+  dependencia recibe parche. Hoy hay una sola: `GHSA-fc5q-39xc-vjpf` (picomatch
+  vía `better-auth > vitest`, dev-only y sin versión parcheada). El audit reporta
+  los ignorados como `(1 ignored)`, no los oculta.
 - `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` son **repository secrets** y se
   inyectan solo en los steps de wrangler/smoke. No se imprimen en ningún log.
 

@@ -1005,7 +1005,7 @@ principal.
 | `sync-secrets.yml` | **solo `workflow_dispatch`** (input `target` = `prod` + `confirm` = `sync`) | `prod` | install → `wrangler secret put <NAME> --env prod` para los 5 runtime secrets del api |
 
 - Un solo deploy con `concurrency: deploy-cloud` y `cancel-in-progress: false`: un deploy en curso no se corta.
-- `pnpm audit --prod --audit-level=high` corre en el workflow: una vulnerabilidad high/critical (o un fallo de la consulta) detiene el deploy de forma visible.
+- `pnpm audit --prod --audit-level=high` corre en el workflow: una vulnerabilidad high/critical (o un fallo de la consulta) detiene el deploy de forma visible. Las excepciones van en `pnpm-workspace.yaml` → `auditConfig.ignoreGhsas` con su motivo escrito (pnpm 10: `ignoreGhsas` para GHSA, `ignoreCves` para CVE) y se retiran en cuanto haya parche. Hoy hay una: `GHSA-fc5q-39xc-vjpf` (picomatch vía `better-auth > vitest`, dev-only, sin versión parcheada).
 - Un fallo de migración detiene el deploy antes de desplegar código.
 - **API sin host público:** el smoke no puede hacer `curl` a `/health` del API. El workflow comprueba `wrangler deployments status` (deployment activo) y `d1 execute … SELECT 1` (D1 remoto); `/health` del API se ejercita en tests y en local. Un smoke real por service binding requiere una ruta en un frontend que llame al API (trabajo de F7 de las apps).
 - **Credenciales en dos niveles:** `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` son *repository secrets* (accesibles desde cualquier job con Environment); los 5 runtime secrets del api son *Environment secrets* de `prod`; `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST` son *Environment variables* de `prod` (`SMOKE_STORE_HOST` también vale a nivel de repo). El Environment `dev` existe y no se usa.
