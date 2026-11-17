@@ -174,7 +174,7 @@ Si haces un deploy manual de dev, repite con `--env dev` y valores **distintos**
 | `INIT_TOKEN` | Environment secret (`prod`) | idem | idem; 32 bytes / 64 hex |
 | `RESEND_API_KEY` | Environment secret (`prod`) | idem | idem |
 | `TURNSTILE_SECRET_KEY` | Environment secret (`prod`) | idem | idem |
-| `TURNSTILE_SITE_KEY` | Environment variable (`prod`) | *Environments → prod → Environment variables* | `0x4AAAAAAAGF7HGDtrRDDGsww`. Valor canónico en `env.prod` de `apps/commercial/wrangler.jsonc`; la variable de GitHub es una copia informativa y no se inyecta en el build |
+| `TURNSTILE_SITE_KEY` | Environment variable (`prod`) | *Environments → prod → Environment variables* | `0x4AAAAAAGF7HGDrrRDDGsww`. Valor canónico en `env.prod` de `apps/commercial/wrangler.jsonc`; la variable de GitHub es una copia informativa y no se inyecta en el build |
 | `SMOKE_STORE_HOST` | Environment variable (`prod`) o Repository variable | *Variables* | host de la tienda de bajo riesgo para el smoke del storefront, sin esquema ni ruta |
 
 El deploy corre automáticamente en cada push a `master`/`main`; no hay pausa por

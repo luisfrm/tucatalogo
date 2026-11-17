@@ -104,13 +104,13 @@ Leyenda de tipo: **var** = configuración no secreta; **secreto** = Worker secre
 | `APP_DOMAIN` | `localhost` | `REPLACE_ME_DEV_STOREFRONT_HOST` | `luisrivas.site` | var | Dominio con el que se construyen los enlaces a la tienda |
 | `API_INTERNAL_URL` | `http://127.0.0.1:9797` | — | — | var | Solo local |
 | `MEDIA_BASE_URL` | `http://127.0.0.1:9797/media` | `REPLACE_ME_DEV_MEDIA_BASE_URL` | `https://tucatalogo-bucket.luisrivas.site` | var | Declarada; el código de `commercial` no la lee |
-| `TURNSTILE_SITE_KEY` | `1x00000000000000000000AA` | `REPLACE_ME_DEV_TURNSTILE_SITE_KEY` | `0x4AAAAAAAGF7HGDtrRDDGsww` | var | **Obligatoria** en `/registro`: sin ella, 503. Pública: vive en `wrangler.jsonc`, no en GitHub |
+| `TURNSTILE_SITE_KEY` | `1x00000000000000000000AA` | `REPLACE_ME_DEV_TURNSTILE_SITE_KEY` | `0x4AAAAAAGF7HGDrrRDDGsww` | var | **Obligatoria** en `/registro`: sin ella, 503. Pública: vive en `wrangler.jsonc`, no en GitHub |
 | `TURNSTILE_MODE` | `test` | `enabled` | `enabled` | var | El código de `commercial` no la lee: el modo real lo aplica el API, donde `test` solo vale en local y dev/prod exigen `enabled` |
 | `API` | — (sin binding) | `tucatalogo-api-dev` | `tucatalogo-api-prod` | binding | Service binding |
 
 > La site key de Turnstile es **pública** y se define como variable del worker
 > `commercial` en `wrangler.jsonc`: `env.prod` ya lleva la clave real
-> (`0x4AAAAAAAGF7HGDtrRDDGsww`). No es un secreto, no va en GitHub y no se inyecta
+> (`0x4AAAAAAGF7HGDrrRDDGsww`). No es un secreto, no va en GitHub y no se inyecta
 > por `wrangler secret put`. El `TURNSTILE_SECRET_KEY` que la valida es un secreto
 > del **api**. En `env.dev` la site key sigue como `REPLACE_ME_DEV_TURNSTILE_SITE_KEY`.
 
@@ -163,7 +163,7 @@ Hay dos niveles de credenciales a propósito:
 | `INIT_TOKEN` | Environment secret (`prod`) | idem | idem; 32 bytes / 64 hex aleatorio |
 | `RESEND_API_KEY` | Environment secret (`prod`) | idem | idem |
 | `TURNSTILE_SECRET_KEY` | Environment secret (`prod`) | idem | idem |
-| `TURNSTILE_SITE_KEY` | Environment variable (`prod`) | *Settings → Environments → prod → Environment variables* | `0x4AAAAAAAGF7HGDtrRDDGsww`. Copia informativa: el valor que usa el widget es el de `env.prod` de `apps/commercial/wrangler.jsonc` |
+| `TURNSTILE_SITE_KEY` | Environment variable (`prod`) | *Settings → Environments → prod → Environment variables* | `0x4AAAAAAGF7HGDrrRDDGsww`. Copia informativa: el valor que usa el widget es el de `env.prod` de `apps/commercial/wrangler.jsonc` |
 | `SMOKE_STORE_HOST` | Environment variable (`prod`) o Repository variable | *Variables* | Host de la tienda de bajo riesgo para el smoke del storefront, sin esquema ni ruta. Si no existe, el workflow cae en `demo.luisrivas.site` |
 
 `TURNSTILE_SITE_KEY` es pública: el valor canónico vive en

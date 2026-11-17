@@ -117,6 +117,6 @@ describe("B9: Turnstile en commercial", () => {
     // `wrangler.jsonc` (env.prod), nunca en GitHub. prod ya no admite placeholders.
     const prodSiteKey = commercial.env?.prod?.vars?.TURNSTILE_SITE_KEY;
     expect(String(prodSiteKey)).not.toContain("REPLACE_ME");
-    expect(prodSiteKey).toBe("0x4AAAAAAAGF7HGDtrRDDGsww");
+    expect(prodSiteKey).toBe("0x4AAAAAAGF7HGDrrRDDGsww");
   });
 });

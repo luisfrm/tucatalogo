@@ -50,7 +50,7 @@
         // secret del api, sincronizado desde un GitHub Repository secret. Sin
         // ambos, el registro da 503.
         "TURNSTILE_MODE": "enabled",
-        "TURNSTILE_SITE_KEY": "0x4AAAAAAAGF7HGDtrRDDGsww"
+        "TURNSTILE_SITE_KEY": "0x4AAAAAAGF7HGDrrRDDGsww"
       },
       "services": [
         {

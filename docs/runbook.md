@@ -94,7 +94,7 @@ Prueba con un reset del console (`/recuperar`).
 2. `TURNSTILE_SECRET_KEY`: actualiza el Environment secret de `prod` y lanza
    **Sync worker secrets** (`target: prod`, `confirm: sync`).
 3. `TURNSTILE_SITE_KEY` es pública: el valor canónico va en `env.prod` de
-   `apps/commercial/wrangler.jsonc` (hoy `0x4AAAAAAAGF7HGDtrRDDGsww`). Cámbialo
+   `apps/commercial/wrangler.jsonc` (hoy `0x4AAAAAAGF7HGDrrRDDGsww`). Cámbialo
    ahí y despliega `commercial`; actualiza también la copia informativa que vive
    como Environment variable `prod` para que no quede desfasada.
 4. Con `TURNSTILE_MODE=enabled`, un token ausente o inválido devuelve 400
