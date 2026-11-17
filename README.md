@@ -11,8 +11,8 @@ tienda**: se publica en `slug.luisrivas.site`, el dueño la administra en
 
 **Estado actual:** F1 (monorepo), F2 (API y auth), F3 (commercial), F4 (storefront
 y temas), F5 (`/panel-admin`) y F6 (console) están implementados. `docs/` y los
-tres workflows existen; los deploy a Cloudflare y los IDs reales siguen pendientes
-(ver [`docs/deploy.md`](./docs/deploy.md)).
+dos workflows (`ci.yml`, `deploy-prod.yml`) existen; el deploy a Cloudflare y los
+IDs reales siguen pendientes (ver [`docs/deploy.md`](./docs/deploy.md)).
 
 ## Stack
 
@@ -312,7 +312,9 @@ Sin validar en este repositorio (no hay credenciales ni deploy):
 
 - IDs reales de D1 (`REPLACE_ME_*_D1_DATABASE_ID`) y hosts de `env.dev`.
 - Gate del custom domain de R2 frente al wildcard `*.luisrivas.site`.
-- `deploy-dev.yml` y `deploy-prod.yml` existen pero nunca se han ejecutado; falta
-  `SMOKE_STORE_HOST` y los Environments `dev`/`prod` con revisores.
+- Deploy **prod-only**: `deploy-prod.yml` despliega en cada push a `master`/`main`,
+  sin approval ni Environment. Faltan los repository secrets
+  `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` y la repository variable
+  `SMOKE_STORE_HOST`; el workflow nunca se ha ejecutado.
 - Turnstile y Resend reales (local usa `test` y `memory`).
 - Lighthouse/axe formal sobre dev/prod.

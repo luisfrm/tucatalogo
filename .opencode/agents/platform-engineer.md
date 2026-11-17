@@ -36,7 +36,7 @@ Eres ingeniero de plataforma especializado en Cloudflare Workers y monorepos pnp
 - `pnpm-workspace.yaml`, scripts raíz (`lint`, `typecheck`, `test`, `dev`, `build`), TypeScript, ESLint y tailwind preset en `packages/config`.
 - Service bindings `commercial`, `web` y `console` → `api`, uno por entorno. La api no se consume por URL pública entre workers ni con tokens de servicio.
 - D1 por entorno y R2 por entorno, con **una sola variable `MEDIA_BASE_URL`** por entorno (prod `https://tucatalogo-bucket.luisrivas.site`; local `http://127.0.0.1:9797/media`; dev un único valor explícito). Sin `cdn.` ni host alternativo.
-- CI/CD: `ci.yml`, `deploy-dev.yml` (push a main), `deploy-prod.yml` (tag o dispatch con environment de revisores). Migraciones antes del deploy; orden api → web/commercial/console; smoke en `/health` de cada frontend. El api no tiene host público: se valida con `wrangler deployments status` + D1 remoto, nunca con `curl`.
+- CI/CD **prod-only**: `ci.yml` (PR/push) y `deploy-prod.yml`, que despliega en **cada push a `master`/`main`** (y por `workflow_dispatch`) **sin Environments ni aprobaciones**. Credenciales: repository secrets `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`; `SMOKE_STORE_HOST` es repository variable. Sin workflow de dev. Migraciones antes del deploy; orden api → web/commercial/console; smoke en `/health` de cada frontend. El api no tiene host público: se valida con `wrangler deployments status` + D1 remoto, nunca con `curl`.
 - Aportas la lista real de variables y secretos por app y entorno; `docs/env.md` lo redacta `@docs-writer`.
 
 ## Reglas

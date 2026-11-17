@@ -7,6 +7,12 @@ este repositorio**: no hay credenciales ni recursos creados. Los IDs y hosts de
 Regla del proyecto: `wrangler deploy`, las migraciones remotas y los cambios de
 DNS requieren confirmación explícita del owner. No se despliega desde local.
 
+**Modelo actual: prod-only.** El repo no tiene entorno de dev automatizado ni
+GitHub Environments. El único deploy es a `env.prod`, disparado automáticamente
+por cada push a `master`/`main` (y a mano con `workflow_dispatch`), sin
+aprobaciones. `env.dev` sigue existiendo en los `wrangler.jsonc` para un deploy
+manual puntual, pero ningún workflow lo despliega.
+
 ## Prerrequisitos Cloudflare
 
 | # | Requisito | Detalle |
@@ -14,10 +20,10 @@ DNS requieren confirmación explícita del owner. No se despliega desde local.
 | 1 | Zona `luisrivas.site` activa | Con DNS gestionado por Cloudflare |
 | 2 | Comodín `*` **proxied** | Necesario para que `*.luisrivas.site` llegue al worker `web`; la ruta del Worker intercepta el registro |
 | 3 | Plan **Workers Paid** | D1, R2 y límites de CPU del diseño (PLAN §18) |
-| 4 | Token de API | Permisos de Workers Scripts y Routes (edit), D1 (edit), R2 (edit) y Zone (read); se guarda como `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` en GitHub Environments |
+| 4 | Token de API | Permisos de Workers Scripts y Routes (edit), D1 (edit), R2 (edit) y Zone (read); se guarda como repository secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` |
 | 5 | Resend | Dominio de envío verificado (SPF/DKIM) y API key |
 | 6 | Turnstile | Site key y secret key para los hosts del registro |
-| 7 | GitHub Environments | `dev` y `prod`, con revisores obligatorios en `prod` |
+| 7 | GitHub repo secrets/variable | `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` como *repository secrets*, `SMOKE_STORE_HOST` como *repository variable*. Sin Environments ni aprobaciones |
 | 8 | `INIT_TOKEN` | Aleatorio (32 bytes = 64 hex en local, dev y prod; valores distintos), guardado como secreto del API |
 | 9 | Buzón de pruebas | Para E2E de OTP y reset |
 
@@ -79,46 +85,56 @@ Cada app tiene un `wrangler.jsonc` con:
 - **Service bindings** `API` en `web`, `commercial` y `console`, apuntando a
   `tucatalogo-api-dev` / `tucatalogo-api-prod`.
 - `observability.enabled` y `upload_source_maps` activos en los cuatro workers.
-- **Sin hosts accidentales:** `api` con `workers_dev: false` y `preview_urls: false` en todos los entornos; `web`, `commercial` y `console` con `workers_dev: true` solo en `env.dev` (lo usa el smoke) y `false` en `env.prod`; `preview_urls: false` siempre. El check **A1** (`node packages/config/scripts/check-worker-configs.mjs`) lo valida antes de cada deploy.
+- **Sin hosts accidentales:** `api` con `workers_dev: false` y `preview_urls: false` en todos los entornos; `web`, `commercial` y `console` con `workers_dev: true` solo en `env.dev` (para un deploy manual de dev; ningún workflow lo usa) y `false` en `env.prod`; `preview_urls: false` siempre. El check **A1** (`node packages/config/scripts/check-worker-configs.mjs`) lo valida antes de cada deploy.
 
 `env.dev` no define rutas: se usa `*-dev.workers.dev` y `?siteId` para resolver
 la tienda.
 
 ## Secretos
 
-Solo el worker `api` tiene secretos. Se cargan por entorno desde `apps/api`:
+Solo el worker `api` tiene secretos. Se cargan por entorno desde `apps/api`; el
+deploy automático solo usa `env.prod`:
 
 ```bash
 cd apps/api
-pnpm exec wrangler secret put BETTER_AUTH_SECRET_STORE --env dev
-pnpm exec wrangler secret put BETTER_AUTH_SECRET_CONSOLE --env dev
-pnpm exec wrangler secret put RESEND_API_KEY --env dev
-pnpm exec wrangler secret put TURNSTILE_SECRET_KEY --env dev
-pnpm exec wrangler secret put INIT_TOKEN --env dev
+pnpm exec wrangler secret put BETTER_AUTH_SECRET_STORE --env prod
+pnpm exec wrangler secret put BETTER_AUTH_SECRET_CONSOLE --env prod
+pnpm exec wrangler secret put RESEND_API_KEY --env prod
+pnpm exec wrangler secret put TURNSTILE_SECRET_KEY --env prod
+pnpm exec wrangler secret put INIT_TOKEN --env prod
 ```
 
-Repite con `--env prod` y valores **distintos**. `EMAIL_DRIVER`,
-`TURNSTILE_MODE`, `MEDIA_BASE_URL`, `STORE_ORIGIN_TEMPLATE` y `CONSOLE_ORIGIN`
-son variables no secretas y viven en `wrangler.jsonc`. Detalle completo en
-[`env.md`](./env.md).
+Si haces un deploy manual de dev, repite con `--env dev` y valores **distintos**.
+`EMAIL_DRIVER`, `TURNSTILE_MODE`, `MEDIA_BASE_URL`, `STORE_ORIGIN_TEMPLATE` y
+`CONSOLE_ORIGIN` son variables no secretas y viven en `wrangler.jsonc`. Detalle
+completo en [`env.md`](./env.md).
 
-### GitHub Environments
+### GitHub repo secrets y variables
+
+Todo se configura una sola vez en **Settings → Secrets and variables → Actions**
+del repositorio. No hay Environments.
 
 | Nombre | Tipo | Dónde | Uso |
 | --- | --- | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | secret | Environments `dev` y `prod` | wrangler: migraciones, deploy, status y D1 remoto |
-| `CLOUDFLARE_ACCOUNT_ID` | secret | Environments `dev` y `prod` | idem |
-| `SMOKE_STORE_HOST` | variable | Environment `prod` (o repositorio) | host de la tienda de bajo riesgo para el smoke del storefront (`demo.luisrivas.site`) |
+| `CLOUDFLARE_API_TOKEN` | Repository secret | *Secrets* | wrangler: migraciones, deploy, status y D1 remoto |
+| `CLOUDFLARE_ACCOUNT_ID` | Repository secret | *Secrets* | idem |
+| `SMOKE_STORE_HOST` | Repository variable | *Variables* | host de la tienda de bajo riesgo para el smoke del storefront (`demo.luisrivas.site`) |
 
-`prod` debe tener **revisores obligatorios**: el deploy se pausa hasta la
-aprobación. Los secrets nunca se imprimen; solo se inyectan en los steps de
-wrangler y smoke.
+El deploy corre automáticamente en cada push a `master`/`main`; no hay pausa por
+aprobación. Los secrets nunca se imprimen: solo se inyectan en los steps de
+wrangler y smoke. `SMOKE_STORE_HOST` es una **variable** (no secreta) porque el
+host aparece en logs; sin ella el smoke falla de forma visible.
+
+> **Antes del primer push de este cambio:** el workflow nuevo se dispara con el
+> push. Configura los dos secrets y la variable **antes**, o haz el primer push
+> con `[skip ci]` en el mensaje del commit (este repo lo hizo así) y el deploy no
+> se ejecutará hasta el siguiente push.
 
 ## Orden de deploy
 
 El API va primero: los frontends consumen su contrato.
 
-1. **Migraciones** (dev o prod).
+1. **Migraciones** (prod).
 2. **`api`**.
 3. **`web`, `commercial` y `console`** (pueden ir en paralelo).
 4. **Smoke** de los hosts.
@@ -127,8 +143,6 @@ El API va primero: los frontends consumen su contrato.
 
 ```bash
 cd apps/api
-pnpm exec wrangler d1 migrations apply tucatalogo-dev --remote --env dev
-# prod:
 pnpm exec wrangler d1 migrations apply tucatalogo-prod --remote --env prod
 ```
 
@@ -145,8 +159,6 @@ Un fallo de migración detiene el deploy antes del código.
 
 ```bash
 cd apps/api
-pnpm exec wrangler deploy --env dev
-# prod:
 pnpm exec wrangler deploy --env prod
 ```
 
@@ -170,7 +182,8 @@ pnpm build
 pnpm exec wrangler deploy
 ```
 
-Repite en `apps/commercial` y `apps/console` (dev con `CLOUDFLARE_ENV=dev`).
+Repite en `apps/commercial` y `apps/console` con `CLOUDFLARE_ENV=prod`: el
+workflow solo construye y despliega `env.prod`.
 
 > **Pendiente cloud:** el flujo build + deploy de los frontends se validará en el
 > primer deploy real. El `wrangler.jsonc` de origen y el build generado
@@ -182,61 +195,62 @@ Repite en `apps/commercial` y `apps/console` (dev con `CLOUDFLARE_ENV=dev`).
 
 ### Workflows
 
-| Workflow | Disparador | Environment | Despliega |
+| Workflow | Disparador | Environments | Despliega |
 | --- | --- | --- | --- |
 | [`ci.yml`](../.github/workflows/ci.yml) | push a `main` y PR | — | No |
-| [`deploy-dev.yml`](../.github/workflows/deploy-dev.yml) | push a `main` | `dev` | `env.dev` |
-| [`deploy-prod.yml`](../.github/workflows/deploy-prod.yml) | tag `v*` o `workflow_dispatch` | `prod` (revisores) | `env.prod` |
+| [`deploy-prod.yml`](../.github/workflows/deploy-prod.yml) | push a `master`/`main` o `workflow_dispatch` | — (repository secrets) | `env.prod` |
 
-- Los dos deploys comparten `concurrency: group: deploy-cloud` con
-  `cancel-in-progress: false`: no se solapan y un deploy en curso no se corta.
-- `deploy-prod.yml` no se dispara desde PR; el Environment `prod` debe tener
-  revisores obligatorios configurados en GitHub.
-- `pnpm audit --prod --audit-level=high` corre en ambos workflows: si aparece
-  una vulnerabilidad high/critical o la consulta falla, el deploy falla visible.
-- Los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` se leen del
-  Environment correspondiente y solo se inyectan en los steps de wrangler/smoke.
-  No se imprimen en ningún log.
+- Prod-only: no existe `deploy-dev.yml` y ningún workflow despliega `env.dev`.
+- `deploy-prod.yml` comparte `concurrency: group: deploy-cloud` con
+  `cancel-in-progress: false`: un deploy en curso no se corta.
+- Se dispara con **cada push** a la línea principal, sin aprobación: si el commit
+  lleva `[skip ci]` en el mensaje no se ejecuta. Tampoco corre desde PR.
+- `pnpm audit --prod --audit-level=high` corre en el workflow: si aparece una
+  vulnerabilidad high/critical o la consulta falla, el deploy falla visible.
+- `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` son **repository secrets** y se
+  inyectan solo en los steps de wrangler/smoke. No se imprimen en ningún log.
 
-Pasos comunes (dev y prod):
+Pasos del workflow (prod):
 
 1. checkout → pnpm 10 → Node 22 → `pnpm install --frozen-lockfile`.
 2. `node packages/config/scripts/check-worker-configs.mjs` (A1: hosts/rutas).
 3. `pnpm audit --prod --audit-level=high` → `pnpm lint` → `pnpm typecheck` →
    `pnpm test` → `pnpm build`.
-4. **Migraciones** (`--remote --env <entorno>`) desde `apps/api`. En CI wrangler
+4. **Migraciones** (`--remote --env prod`) desde `apps/api`. En CI wrangler
    omite la confirmación interactiva; si una migración falla, el deploy se detiene
    antes de tocar código.
-5. **Deploy del api** (`wrangler deploy --env <entorno>`).
-6. **Frontends**: `CLOUDFLARE_ENV=<entorno> pnpm build` + `wrangler deploy --env
-   <entorno>` en `web`, `commercial` y `console`, en ese orden.
+5. **Deploy del api** (`wrangler deploy --env prod`).
+6. **Frontends**: `CLOUDFLARE_ENV=prod pnpm build` + `wrangler deploy --env
+   prod` en `web`, `commercial` y `console`, en ese orden.
 7. **Comprobación interna del api**: deployment activo
    (`wrangler deployments status`) y D1 remoto (`d1 execute ... SELECT 1`).
 8. **Smoke** de `/health` en los frontends (ver abajo).
 
 El paso 6 es obligatorio: el plugin de Cloudflare fija rutas, bindings y vars del
-entorno **al construir**. Desplegar un build local con `--env dev/prod` falla con
-un error de `targetEnvironment`; por eso cada app se reconstruye con
+entorno **al construir**. Desplegar un build local con `--env prod` falla con un
+error de `targetEnvironment`; por eso cada app se reconstruye con
 `CLOUDFLARE_ENV` justo antes de su deploy.
 
 **Ninguno de estos workflows se ha ejecutado todavía**: no hay credenciales ni
-recursos creados en Cloudflare.
+recursos creados en Cloudflare. El commit que introdujo el flujo prod-only viajó
+con `[skip ci]` para no desplegar antes de que el owner cree los secrets.
 
 ## Smoke
 
-Los workflows comprueban `/health` de los tres frontends con reintentos (12 × 5 s).
+`deploy-prod.yml` comprueba `/health` de los tres frontends con reintentos (12 × 5 s).
 
 | Entorno | web | commercial | console |
 | --- | --- | --- | --- |
-| dev | `https://tucatalogo-web-dev.<subdominio>.workers.dev/health` | `https://tucatalogo-commercial-dev.<subdominio>.workers.dev/health` | `https://tucatalogo-console-dev.<subdominio>.workers.dev/health` |
 | prod | `https://<SMOKE_STORE_HOST>/health` | `https://tucatalogo.luisrivas.site/health` | `https://console-tucatalogo.luisrivas.site/health` |
 
-- El `<subdominio>` de dev se obtiene de la API de Cloudflare
-  (`GET /accounts/:id/workers/subdomain`) con el token del Environment.
+- `env.dev` no tiene smoke automático: su workflow ya no existe.
 - En prod el storefront no tiene host fijo (depende del slug), así que el
-  workflow exige la variable `SMOKE_STORE_HOST` (p. ej. `demo.luisrivas.site`,
-  una tienda de bajo riesgo). Si falta, el step falla de forma visible.
+  workflow exige la repository variable `SMOKE_STORE_HOST` (p. ej.
+  `demo.luisrivas.site`, una tienda de bajo riesgo). Si falta, el step falla de
+  forma visible.
 - `/health` de cada frontend valida `ENVIRONMENT` y `APP_DOMAIN` (200 o 503).
+- El `<subdominio>` workers.dev que usaba el smoke de dev ya no se consulta: el
+  workflow no llama a la API de Cloudflare para descubrirlo.
 
 ### API
 
@@ -245,8 +259,8 @@ interno expuesto. El workflow verifica:
 
 ```bash
 cd apps/api
-pnpm exec wrangler deployments status --name tucatalogo-api-dev --env dev
-pnpm exec wrangler d1 execute tucatalogo-dev --remote --env dev --yes \
+pnpm exec wrangler deployments status --name tucatalogo-api-prod --env prod
+pnpm exec wrangler d1 execute tucatalogo-prod --remote --env prod --yes \
   --command "SELECT 1 AS ok"
 ```
 
@@ -317,9 +331,9 @@ se vuelve a iniciar sesión en el host nuevo.
 ## Pendiente cloud
 
 - **Workflows creados pero nunca ejecutados**: no hay credenciales ni recursos.
-- GitHub Environments `dev` y `prod` con `CLOUDFLARE_API_TOKEN`,
-  `CLOUDFLARE_ACCOUNT_ID` y revisores en `prod`; variable `SMOKE_STORE_HOST`.
-- Worker secrets del api por entorno: `BETTER_AUTH_SECRET_STORE`,
+- Repository secrets `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`, y
+  repository variable `SMOKE_STORE_HOST`. Sin Environments ni aprobaciones.
+- Worker secrets del api (dev/prod, valores distintos): `BETTER_AUTH_SECRET_STORE`,
   `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`,
   `TURNSTILE_SECRET_KEY`.
 - IDs reales de D1 (`REPLACE_ME_DEV_D1_DATABASE_ID` /
@@ -330,4 +344,4 @@ se vuelve a iniciar sesión en el host nuevo.
   bindings y vars del entorno llegan al build generado).
 - Smoke real del API por service binding: requiere una ruta de smoke en un
   frontend (hoy no existe; el workflow comprueba deployment + D1).
-- Turnstile, Resend y Lighthouse/axe en dev/prod.
+- Turnstile, Resend y Lighthouse/axe contra prod.

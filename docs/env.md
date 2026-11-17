@@ -126,15 +126,21 @@ Sin secretos: el `INIT_TOKEN` llega del formulario `/init`.
 
 ## Variables solo de CI (GitHub)
 
-| Nombre | Dónde | Quién lo define |
-| --- | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | GitHub Environment `dev` / `prod` | Owner del repo |
-| `CLOUDFLARE_ACCOUNT_ID` | GitHub Environment `dev` / `prod` | Owner del repo |
-| `SMOKE_STORE_HOST` | Environment `prod` (o repositorio) | Owner: host de la tienda de bajo riesgo para el smoke del storefront (`demo.luisrivas.site`). Sin esquema ni ruta |
+**Deploy prod-only:** `deploy-prod.yml` corre automáticamente en cada push a
+`master`/`main` (y por `workflow_dispatch`). No hay GitHub Environments ni
+aprobaciones: todo vive en el repositorio.
 
-No se guardan en el repositorio ni en `.dev.vars`. Los tres workflows existen en
-`.github/workflows/` (`ci.yml`, `deploy-dev.yml`, `deploy-prod.yml`); los dos de
-deploy todavía no se han ejecutado (sin credenciales ni recursos Cloudflare).
+| Nombre | Tipo | Dónde | Uso |
+| --- | --- | --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Repository secret | *Settings → Secrets and variables → Actions → Secrets* | wrangler: migraciones, deploy, status y D1 remoto |
+| `CLOUDFLARE_ACCOUNT_ID` | Repository secret | idem | idem |
+| `SMOKE_STORE_HOST` | Repository variable | *Settings → Secrets and variables → Actions → Variables* | Host de la tienda de bajo riesgo para el smoke del storefront (`demo.luisrivas.site`). Sin esquema ni ruta |
+
+No se guardan en el repositorio ni en `.dev.vars`. Solo hay dos workflows en
+`.github/workflows/` (`ci.yml` y `deploy-prod.yml`); no existe `deploy-dev.yml`
+ni ningún Environment. El deploy de prod todavía no se ha ejecutado (sin
+credenciales ni recursos Cloudflare): hasta que el owner cree los dos secrets y
+la variable, el workflow falla de forma visible.
 
 ## Variables de test
 

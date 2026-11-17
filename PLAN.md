@@ -257,7 +257,7 @@ tucatalogo/
 │  ├─ types/                  # Zod + tipos
 │  └─ ui/
 ├─ docs/                      # env.md, deploy.md, runbook.md (F7)
-├─ .github/workflows/         # ci, deploy-dev, deploy-prod (F1/F7)
+├─ .github/workflows/         # ci, deploy-prod (F1/F7)
 ├─ pnpm-workspace.yaml
 ├─ PLAN.md
 └─ AGENTS.md
@@ -992,17 +992,20 @@ Nombres reales en `wrangler.jsonc`: `tucatalogo-{api,web,commercial,console}-{de
 
 ### 13.2 Workflows (implementados, sin ejecutar en cloud)
 
+Modelo **prod-only**: no hay workflow de dev ni GitHub Environments. El deploy de
+prod es automático en cada push a la línea principal, sin aprobaciones.
+
 | Workflow | Disparador | Environment | Pasos |
 | --- | --- | --- | --- |
 | `ci.yml` | PR y push a `main` | — | install con lockfile → lint → typecheck → test → build; no despliega |
-| `deploy-dev.yml` | push a `main` | `dev` | install → check A1 → `pnpm audit --prod --audit-level=high` → lint → typecheck → test → build → migraciones D1 dev → deploy api → web → commercial → console → deployment/D1 del API → smoke dev |
-| `deploy-prod.yml` | tag `v*` o `workflow_dispatch` | `prod` (revisores) | mismo pipeline con `env.prod` y smoke prod con `SMOKE_STORE_HOST` |
+| `deploy-prod.yml` | push a `master`/`main` o `workflow_dispatch` | — (repository secrets) | install → check A1 → `pnpm audit --prod --audit-level=high` → lint → typecheck → test → build → migraciones D1 prod → deploy api → web → commercial → console → deployment/D1 del API → smoke prod con `SMOKE_STORE_HOST` |
 
-- Los dos deploys comparten `concurrency: deploy-cloud` con `cancel-in-progress: false`: dev y prod no se solapan y un deploy en curso no se corta.
-- `pnpm audit --prod --audit-level=high` corre en ambos: una vulnerabilidad high/critical (o un fallo de la consulta) detiene el deploy de forma visible.
+- Un solo deploy con `concurrency: deploy-cloud` y `cancel-in-progress: false`: un deploy en curso no se corta.
+- `pnpm audit --prod --audit-level=high` corre en el workflow: una vulnerabilidad high/critical (o un fallo de la consulta) detiene el deploy de forma visible.
 - Un fallo de migración detiene el deploy antes de desplegar código.
 - **API sin host público:** el smoke no puede hacer `curl` a `/health` del API. El workflow comprueba `wrangler deployments status` (deployment activo) y `d1 execute … SELECT 1` (D1 remoto); `/health` del API se ejercita en tests y en local. Un smoke real por service binding requiere una ruta en un frontend que llame al API (trabajo de F7 de las apps).
-- **Estado real:** los tres workflows existen y `ci.yml` corre en PR/push; `deploy-*` no se han ejecutado nunca (sin credenciales ni recursos Cloudflare).
+- **Credenciales:** `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` son *repository secrets*; `SMOKE_STORE_HOST` es *repository variable*. Sin Environments ni revisores.
+- **Estado real:** `ci.yml` corre en PR/push; `deploy-prod.yml` no se ha ejecutado nunca (sin credenciales ni recursos Cloudflare). El commit que introdujo el flujo prod-only llevó `[skip ci]` para no desplegar antes de configurar los secrets.
 - Scripts reales: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm db:migrate:local` y `pnpm db:seed:local`. Las migraciones remotas se ejecutan con `wrangler d1 migrations apply <db> --remote --env <env>` desde el workflow (no hay script `db:migrate:<env>`).
 
 ### 13.3 Migraciones
@@ -1015,19 +1018,21 @@ Nombres reales en `wrangler.jsonc`: `tucatalogo-{api,web,commercial,console}-{de
 
 ### 13.4 Orden de deploy
 
-1. Migraciones (dev o prod).
+1. Migraciones de prod.
 2. `api` (nuevo contrato).
 3. `web`, `commercial`, `console` (pueden ir en paralelo; consumen el contrato nuevo).
 4. Smoke: `/health` a través de cada frontend + una ruta pública + login de prueba.
 
-El API va primero porque los frontends consumen su contrato; nunca al revés.
+El API va primero porque los frontends consumen su contrato; nunca al revés. El
+deploy es prod-only: no hay automatización de `env.dev`.
 
 ### 13.5 Secretos y variables
 
 | Variable / secreto | Dónde | Quién lo define |
 | --- | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | GitHub Environment `dev`/`prod` | Owner del repo |
-| `CLOUDFLARE_ACCOUNT_ID` | GitHub Environment `dev`/`prod` | Owner del repo |
+| `CLOUDFLARE_API_TOKEN` | Repository secret de GitHub | Owner del repo |
+| `CLOUDFLARE_ACCOUNT_ID` | Repository secret de GitHub | Owner del repo |
+| `SMOKE_STORE_HOST` | Repository variable de GitHub (no secreta) | Owner: host de la tienda de bajo riesgo para el smoke de prod |
 | `BETTER_AUTH_SECRET_STORE` | Worker secret (**solo** `api`) | Owner, distinto por entorno |
 | `BETTER_AUTH_SECRET_CONSOLE` | Worker secret (**solo** `api`) | Owner, distinto por entorno |
 | `RESEND_API_KEY` | Worker secret (api) | Owner |
@@ -1054,8 +1059,8 @@ Detalle completo por app y entorno en `docs/env.md` (entregable de F7). Rotació
 
 ### 13.6 Smoke y rollback
 
-- Smoke dev: `/health` de web, commercial y console (ejercen el binding), home de una tienda de prueba (hoy no hay seeds: se crea con el flujo real de registro) y login de prueba del console.
-- Smoke prod: `/health`, una tienda real de bajo riesgo y login del console sin ejecutar acciones destructivas.
+- Smoke prod: `/health` de web (con `SMOKE_STORE_HOST`), commercial y console, una tienda real de bajo riesgo y login del console sin ejecutar acciones destructivas.
+- Smoke dev: no existe. `deploy-dev.yml` se eliminó al pasar a prod-only; `env.dev` solo se despliega a mano si el owner lo pide.
 - Rollback de código: `wrangler rollback <nombre-del-worker>` (p. ej. `tucatalogo-web-prod`), primero los frontends y luego el api si el problema es de contrato (o el api primero si el contrato nuevo rompe a los antiguos).
 - Rollback de datos: D1 Time Travel para restaurar la base; **no** restaura R2. Un borrado de tienda es definitivo (v1.0 §11), por eso la confirmación es estricta.
 - Toda release debe poder convivir con la versión anterior del otro lado del binding durante la ventana de deploy.
@@ -1106,7 +1111,7 @@ Regla: ningún test depende de datos de producción. Los E2E crean sus propias t
 | 6 | Suspender → 404 público; eliminar → datos e imágenes borrados | E2E + verificación en D1/R2 |
 | 7 | Aislamiento: A no puede leer ni escribir datos de B | Suite de aislamiento |
 | 8 | OTP y login con casos negativos: expiración, intentos, reenvíos, rate limit | Suite negativa |
-| 9 | CI despliega a dev en cada merge y a prod con aprobación, aplicando migraciones | Ejecución real de los workflows |
+| 9 | CI despliega a **prod** en cada push a `master`/`main` (automático, sin aprobación), aplicando migraciones antes del código | Ejecución real de `deploy-prod.yml` |
 | 10 | Service bindings funcionan en dev y prod, sin llamadas públicas entre workers | Revisión de rutas + smoke |
 | 11 | Lighthouse móvil ≥ 90 en rendimiento y accesibilidad; AA en los 5 temas y ambos modos | Lighthouse CI + axe |
 | 12 | Slug inexistente o reservado → 404 o error controlado, nunca 500 | Integración + E2E |
@@ -1177,10 +1182,10 @@ Antes de F1:
 1. Zona `luisrivas.site` activa en Cloudflare.
 2. Registro wildcard `*` **proxied** y capacidad de crear rutas de Worker por host.
 3. Plan **Workers Paid** activo (necesario para el volumen de CPU y los límites de R2 del proyecto).
-4. Token de API de Cloudflare con permisos de Workers (scripts y rutas), D1 y R2, más lectura de zona. Guardado como `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` en GitHub Environments.
+4. Token de API de Cloudflare con permisos de Workers (scripts y rutas), D1 y R2, más lectura de zona. Guardado como repository secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`.
 5. Resend con el dominio de envío verificado (SPF/DKIM) y una API key.
 6. Turnstile: site key y secret key creadas para los hosts del registro.
-7. Repositorio en GitHub con Environments `dev` y `prod` (revisores en `prod`).
+7. Repositorio en GitHub con los repository secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` y la repository variable `SMOKE_STORE_HOST` (deploy prod-only, sin Environments ni aprobaciones).
 8. `INIT_TOKEN` generado (aleatorio, ≥ 32 bytes) y guardado como secreto; no se versiona.
 9. **Validar `tucatalogo-bucket.luisrivas.site`**: crear el custom domain de R2 y comprobar que el wildcard de `web` no lo intercepta. Es un gate de F0, no de F1.
 10. Cuentas de correo de prueba y un buzón accesible para E2E de OTP y reset.
