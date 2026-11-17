@@ -1,0 +1,11 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Binarios nativos que necesitan ejecutar su script de instalación.
+# pnpm 10 bloquea por defecto los postinstall de dependencias.
+onlyBuiltDependencies:
+  - "@tailwindcss/oxide"
+  - esbuild
+  - sharp
+  - workerd

@@ -1,0 +1,24 @@
+{
+  "name": "@tucatalogo/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Constantes y utilidades puras usadas por 2+ apps",
+  "exports": {
+    ".": "./src/index.ts",
+    "./constants": "./src/constants/index.ts",
+    "./libs": "./src/libs/index.ts",
+    "./security-headers": "./src/libs/security-headers.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tucatalogo/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  }
+}

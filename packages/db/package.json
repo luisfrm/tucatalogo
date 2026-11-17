@@ -1,0 +1,29 @@
+{
+  "name": "@tucatalogo/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Esquema Drizzle de TuCatálogo: reinos admin_* y store_*, negocio, migraciones versionadas y seeds locales",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./schema/index.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate:local": "wrangler d1 migrations apply tucatalogo-local --local --config ../../apps/api/wrangler.jsonc",
+    "seed:local": "node ./scripts/seed-local.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261117.1",
+    "@types/node": "22.20.5",
+    "drizzle-kit": "0.31.11",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12",
+    "wrangler": "4.163.0"
+  }
+}

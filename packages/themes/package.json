@@ -1,0 +1,26 @@
+{
+  "name": "@tucatalogo/themes",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tokens de los 5 temas, metadata del picker y emisión de CSS variables",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./src/tokens.ts",
+    "./color": "./src/color.ts",
+    "./fonts": "./src/fonts.ts",
+    "./fonts/*": "./fonts/*",
+    "./injector": "./src/injector.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tucatalogo/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  }
+}

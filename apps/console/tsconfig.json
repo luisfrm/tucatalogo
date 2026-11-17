@@ -1,0 +1,11 @@
+{
+  "extends": "../../packages/config/tsconfig/base.json",
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.cloudflare.json" },
+    { "path": "./tsconfig.node.json" }
+  ],
+  "compilerOptions": {
+    "checkJs": true
+  }
+}

@@ -1,0 +1,25 @@
+@import "tailwindcss" source(".");
+@import "@tucatalogo/config/tailwind/theme.css";
+
+@source "../../../packages/ui/src";
+
+/*
+ * Los tokens del tema llegan desde el loader de `root` en un <style> del <head>
+ * (`[data-theme="…"]` + `[data-color-mode="…"]`, PLAN §10.5). Aquí solo vive lo
+ * que no depende del tema; `color-scheme` lo fija el injector en `<html>`.
+ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Las fuentes self-hosted se precargan desde el tema; sin descargas extra. */
+  body {
+    min-height: 100vh;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}

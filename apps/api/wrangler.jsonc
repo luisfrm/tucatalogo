@@ -1,0 +1,109 @@
+/**
+ * Worker `api` — Hono, SIN ruta pública (PLAN §4.2 / §13.1).
+ * Top-level = entorno local (`wrangler dev --port 9797`).
+ * `env.dev` / `env.prod` son placeholders de F1: los IDs reales de D1 y los
+ * nombres de recursos los fija el owner antes del primer deploy (docs/env.md).
+ * No hay credenciales de Cloudflare en este repositorio.
+ *
+ * Variables de auth (F2): `EMAIL_DRIVER`, `TURNSTILE_MODE`,
+ * `STORE_ORIGIN_TEMPLATE`, `CONSOLE_ORIGIN` y `EMAIL_FROM` son configuración
+ * no secreta y viven aquí por entorno. Los secretos (`BETTER_AUTH_SECRET_*`,
+ * `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`) van por
+ * `wrangler secret put` y, en local, por `.dev.vars`.
+ */
+{
+  "name": "tucatalogo-api",
+  "main": "./src/index.ts",
+  "compatibility_date": "2026-11-17",
+  "compatibility_flags": ["nodejs_compat"],
+  // A1: el API no tiene hostname público; solo se consume por service binding.
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+  "vars": {
+    "ENVIRONMENT": "local",
+    "APP_DOMAIN": "localhost",
+    "MEDIA_BASE_URL": "http://127.0.0.1:9797/media",
+    "EMAIL_DRIVER": "console",
+    "TURNSTILE_MODE": "test",
+    "STORE_ORIGIN_TEMPLATE": "http://{slug}.localhost:5173",
+    "CONSOLE_ORIGIN": "http://localhost:5175"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tucatalogo-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "../../packages/db/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "tucatalogo-local"
+    }
+  ],
+  "env": {
+    "dev": {
+      "name": "tucatalogo-api-dev",
+      "workers_dev": false,
+      "preview_urls": false,
+      "vars": {
+        "ENVIRONMENT": "development",
+        "APP_DOMAIN": "REPLACE_ME_DEV_STOREFRONT_HOST",
+        "MEDIA_BASE_URL": "REPLACE_ME_DEV_MEDIA_BASE_URL",
+        "EMAIL_DRIVER": "resend",
+        "EMAIL_FROM": "REPLACE_ME_DEV_EMAIL_FROM",
+        "TURNSTILE_MODE": "enabled",
+        "STORE_ORIGIN_TEMPLATE": "https://REPLACE_ME_DEV_WEB_ORIGIN",
+        "CONSOLE_ORIGIN": "https://REPLACE_ME_DEV_CONSOLE_ORIGIN"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "tucatalogo-dev",
+          "database_id": "REPLACE_ME_DEV_D1_DATABASE_ID",
+          "migrations_dir": "../../packages/db/migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA_BUCKET",
+          "bucket_name": "tucatalogo-media-dev"
+        }
+      ]
+    },
+    "prod": {
+      "name": "tucatalogo-api-prod",
+      "workers_dev": false,
+      "preview_urls": false,
+      "vars": {
+        "ENVIRONMENT": "production",
+        "APP_DOMAIN": "luisrivas.site",
+        "MEDIA_BASE_URL": "https://tucatalogo-bucket.luisrivas.site",
+        "EMAIL_DRIVER": "resend",
+        "EMAIL_FROM": "TuCatálogo <no-reply@luisrivas.site>",
+        "TURNSTILE_MODE": "enabled",
+        "STORE_ORIGIN_TEMPLATE": "https://{slug}.luisrivas.site",
+        "CONSOLE_ORIGIN": "https://console-tucatalogo.luisrivas.site"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "tucatalogo-prod",
+          "database_id": "REPLACE_ME_PROD_D1_DATABASE_ID",
+          "migrations_dir": "../../packages/db/migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA_BUCKET",
+          "bucket_name": "tucatalogo-media-prod"
+        }
+      ]
+    }
+  }
+}

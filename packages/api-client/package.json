@@ -1,0 +1,24 @@
+{
+  "name": "@tucatalogo/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cliente Hono RPC + adapter service binding/localhost (solo servidor)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tucatalogo/types": "workspace:*",
+    "hono": "4.13.19"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261117.1",
+    "@tucatalogo/api": "workspace:*",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  }
+}

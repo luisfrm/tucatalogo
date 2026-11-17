@@ -1,0 +1,18 @@
+@import "tailwindcss" source(".");
+@import "@tucatalogo/config/tailwind/theme.css";
+
+@source "../../../packages/ui/src";
+
+html,
+body {
+  color-scheme: light;
+}
+
+::selection {
+  background-color: var(--color-primary-subtle);
+  color: var(--color-text);
+}
+
+dialog::backdrop {
+  background-color: rgb(13 16 20 / 0.55);
+}

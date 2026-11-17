@@ -1,0 +1,67 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tucatalogo-commercial",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2026-11-17",
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+  "vars": {
+    "ENVIRONMENT": "local",
+    "APP_DOMAIN": "localhost",
+    "API_INTERNAL_URL": "http://127.0.0.1:9797",
+    "MEDIA_BASE_URL": "http://127.0.0.1:9797/media",
+    "TURNSTILE_MODE": "test",
+    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+  },
+  "env": {
+    "dev": {
+      "name": "tucatalogo-commercial-dev",
+      "workers_dev": true,
+      "preview_urls": false,
+      "vars": {
+        "ENVIRONMENT": "development",
+        "APP_DOMAIN": "REPLACE_ME_DEV_STOREFRONT_HOST",
+        "MEDIA_BASE_URL": "REPLACE_ME_DEV_MEDIA_BASE_URL",
+        // B9: en dev el widget es real ("enabled"); "test" es exclusivo de local.
+        // Requiere la site key de dev y, en el api, el Worker secret
+        // TURNSTILE_SECRET_KEY. Si falta cualquiera: 503 visible + log.
+        "TURNSTILE_MODE": "enabled",
+        "TURNSTILE_SITE_KEY": "REPLACE_ME_DEV_TURNSTILE_SITE_KEY"
+      },
+      "services": [
+        {
+          "binding": "API",
+          "service": "tucatalogo-api-dev"
+        }
+      ]
+    },
+    "prod": {
+      "name": "tucatalogo-commercial-prod",
+      "workers_dev": false,
+      "preview_urls": false,
+      "vars": {
+        "ENVIRONMENT": "production",
+        "APP_DOMAIN": "luisrivas.site",
+        "MEDIA_BASE_URL": "https://tucatalogo-bucket.luisrivas.site",
+        // B9: Turnstile real en prod. La site key la fija el owner; el secret
+        // vive como Worker secret en el api. Sin ambos, el registro da 503.
+        "TURNSTILE_MODE": "enabled",
+        "TURNSTILE_SITE_KEY": "REPLACE_ME_PROD_TURNSTILE_SITE_KEY"
+      },
+      "services": [
+        {
+          "binding": "API",
+          "service": "tucatalogo-api-prod"
+        }
+      ],
+      "routes": [
+        {
+          "pattern": "tucatalogo.luisrivas.site/*",
+          "zone_name": "luisrivas.site"
+        }
+      ]
+    }
+  }
+}

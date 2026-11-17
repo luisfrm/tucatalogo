@@ -1,0 +1,7 @@
+# Copia este archivo a `.dev.vars` (gitignored). Valores SOLO locales.
+ENVIRONMENT=local
+APP_DOMAIN=localhost
+API_INTERNAL_URL=http://127.0.0.1:9797
+MEDIA_BASE_URL=http://127.0.0.1:9797/media
+TURNSTILE_MODE=test
+TURNSTILE_SITE_KEY=1x00000000000000000000AA

@@ -1,0 +1,26 @@
+Quiero construir un proyecto para mostrar catalogos.
+
+Stack: 
+Backend: Hono. 
+Frontend: React-Router V8 o Next JS > Dime cual me conviene mas para este caso.
+Despliegue en cloudflare workers. Conexion entre workers mediante service binding.
+Database: D1.
+Auth: better-auth de ser posible, sino, me lo informas.
+Monorepo de PNPM.
+
+Apps que tendremos:
+API
+Panel (donde se gestiona todo)
+Commercial
+Web.
+
+Para la parte de web, yo queria que fuera algo como https://[storeId].domain.com, o cliente.domain.com/?siteId=...
+
+Desde domain.com, tendremos la pagina comercial, donde ofrecemos el producto y hay un formulario para registrarse, al registrarse, se crea el subdominio desde cloudflare y ahi detecta el subdominio y en base a eso hace la busqueda del sitio, quiza seria un tema de una sola linea en los dns del dominio, quiza un cname * ?
+
+Theme:
+Algo general, color principal seria este: #c09299.
+
+Para la estructura de la app de clientes, todo se manejara por el site id, tendra una ruta /panel-admin/ para que puedan gestionar los productos y el hero. Necesito que haya un minimo de 5 temas. Donde el usuario desde panel, pueda escoger el tema, esto cambiara el system design, como fuentes, bordes, radios. Entonces al layout original tendremos que ponerle un theme-injector para inyectar los colores desde el servidor. Los distintos temas los construiras con la skill de @ui-ux-pro-max los usuarios venderan principalmente zapatos, maquillaje, sandalias, asi que son temas femeninos, pero tambien podemos incluir algun tema para hombres. A cada tema le daras un nombre y los usuarios pueden escoger desde /panel-admin/settings. Para entrar al panel-admin, habra un login, el usuario previamente tuvo que registrarse desde la app commercial, que es la app publica y habra un formulario de registro con los datos de la tienda, el tema y su correo. Esto sera un formulario de varios pasos con botones de anterior y siguiente para avanzar, en el primer paso datos del propietario, ahi lo necesario junto a la tienda, siguiente paso verificacion de email, se envia un codigo OTP de 6 caracteres al usuario para que valide su correo. Puesto que todo esto sera en cloudflare, necesitaremos los wranglers.jsonc, crea los ci de deploy, yo agregare un cloudflare_token_id y cloudflare_account_id, desplegamos con envs, para hacer un wrangler deploy --env prod, entonces tendremos env de dev y prod. Luego el ambiente general sera el de local.
+
+Analiza todo esto, y hazme todas las preguntas que necesitas saber al respecto y lo que necesites de cada app que este faltando en cuanto al flujo. Necesitaremos tambien un sistema de suscripciones para que los clientes puedan pagar suscripciones a la app y aumentar su tier. En free-tier, y sin tarjeta, solo tendran que insertar su tarjeta cuando tengamos el modulo de suscripciones e implementemos stripe. Pero esto sera en la fase 2, para el MVP o fase 1 quiero que tengamos todo lo que plantee antes. Analizalo, y pregunta lo que haga falta respecto a la logica de negocio y el flujo de cada app.

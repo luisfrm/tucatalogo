@@ -1,0 +1,35 @@
+{
+  "name": "tucatalogo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "TuCatálogo – SaaS multitienda de catálogos (monorepo F1)",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=22.22.0 <25",
+    "pnpm": ">=10 <11"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web,commercial,console -c blue,green,magenta,cyan \"pnpm dev:api\" \"pnpm dev:web\" \"pnpm dev:commercial\" \"pnpm dev:console\"",
+    "dev:api": "pnpm --filter @tucatalogo/api dev",
+    "dev:web": "pnpm --filter @tucatalogo/web dev",
+    "dev:commercial": "pnpm --filter @tucatalogo/commercial dev",
+    "dev:console": "pnpm --filter @tucatalogo/console dev",
+    "build": "pnpm -r build",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report",
+    "db:migrate:local": "pnpm --filter @tucatalogo/db migrate:local",
+    "db:seed:local": "pnpm --filter @tucatalogo/db seed:local"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.65.1",
+    "@tucatalogo/config": "workspace:*",
+    "concurrently": "10.0.7",
+    "eslint": "10.15.0",
+    "typescript": "5.9.3"
+  }
+}

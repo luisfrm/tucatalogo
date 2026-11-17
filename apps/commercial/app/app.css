@@ -1,0 +1,48 @@
+@import "tailwindcss" source(".");
+@import "@tucatalogo/config/tailwind/theme.css";
+
+@source "../../../packages/ui/src";
+
+/*
+ * Base de la superficie `commercial`. Los colores, radios, sombras y
+ * tipografías salen de los tokens que `renderAdminStyleTag({ surface:
+ * "commercial" })` escribe en el `<head>`; aquí no hay hex sueltos.
+ */
+html,
+body {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  text-rendering: optimizeLegibility;
+}
+
+section[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* Los tokens del tema dentro de una preview no deben cambiar el fondo global. */
+[data-theme] {
+  isolation: isolate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
