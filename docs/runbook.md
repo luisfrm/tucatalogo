@@ -38,11 +38,11 @@ dev y prod llevan un valor propio, distinto del local y entre sí; el valor loca
 
 1. Actualiza `apps/api/.dev.vars` (`INIT_TOKEN=...`) y reinicia `pnpm dev:api` si
    no recarga solo.
-2. Actualiza el secreto remoto por entorno. **En prod** el valor es un GitHub
-   Repository secret: actualízalo en *Settings → Secrets and variables → Actions*
-   y lanza el workflow manual **Sync worker secrets** (`target: prod`,
-   `confirm: sync`). Si tocas solo el worker con `secret put`, el siguiente
-   `sync-secrets` volvería al valor del repositorio.
+2. Actualiza el secreto remoto por entorno. **En prod** el valor es un **Environment
+   secret del GitHub Environment `prod`**: actualízalo en *Settings → Environments →
+   prod → Environment secrets* y lanza el workflow manual **Sync worker secrets**
+   (`target: prod`, `confirm: sync`). Si tocas solo el worker con `secret put`, el
+   siguiente `sync-secrets` volvería al valor del Environment.
 
    ```bash
    cd apps/api
@@ -58,7 +58,7 @@ dev y prod llevan un valor propio, distinto del local y entre sí; el valor loca
 
 ### Better Auth (`_STORE` / `_CONSOLE`)
 
-Genera 32 bytes hex por secreto, actualiza los Repository secrets
+Genera 32 bytes hex por secreto, actualiza los Environment secrets de `prod`
 `BETTER_AUTH_SECRET_STORE` / `BETTER_AUTH_SECRET_CONSOLE` y lanza el workflow
 manual **Sync worker secrets** (`target: prod`, `confirm: sync`). Equivalente por
 CLI, solo si no usas el workflow:
@@ -76,8 +76,8 @@ y verifica con un login real.
 
 ### Resend
 
-Actualiza el Repository secret `RESEND_API_KEY` y lanza **Sync worker secrets**
-(`target: prod`, `confirm: sync`). Equivalente por CLI:
+Actualiza el Environment secret de `prod` `RESEND_API_KEY` y lanza **Sync worker
+secrets** (`target: prod`, `confirm: sync`). Equivalente por CLI:
 
 ```bash
 cd apps/api
@@ -91,11 +91,12 @@ Prueba con un reset del console (`/recuperar`).
 ### Turnstile
 
 1. Crea el widget/keys nuevas en Cloudflare.
-2. `TURNSTILE_SECRET_KEY`: actualiza el Repository secret y lanza **Sync worker
-   secrets** (`target: prod`, `confirm: sync`).
-3. `TURNSTILE_SITE_KEY` es pública: va en `env.prod` de
-   `apps/commercial/wrangler.jsonc` (hoy `0x4AAAAAAAGF7HGDtrRDDGsww`), no en
-   GitHub. Cámbiala ahí y despliega `commercial`.
+2. `TURNSTILE_SECRET_KEY`: actualiza el Environment secret de `prod` y lanza
+   **Sync worker secrets** (`target: prod`, `confirm: sync`).
+3. `TURNSTILE_SITE_KEY` es pública: el valor canónico va en `env.prod` de
+   `apps/commercial/wrangler.jsonc` (hoy `0x4AAAAAAAGF7HGDtrRDDGsww`). Cámbialo
+   ahí y despliega `commercial`; actualiza también la copia informativa que vive
+   como Environment variable `prod` para que no quede desfasada.
 4. Con `TURNSTILE_MODE=enabled`, un token ausente o inválido devuelve 400
    `TURNSTILE_FAILED`; un fallo de red de `siteverify` devuelve 503 y el registro
    **no** continúa.

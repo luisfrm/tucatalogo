@@ -94,7 +94,7 @@
         {
           "binding": "DB",
           "database_name": "tucatalogo-prod",
-          "database_id": "REPLACE_ME_PROD_D1_DATABASE_ID",
+          "database_id": "ed32bca0-2ed9-4a07-97e5-018e8a15049f",
           "migrations_dir": "../../packages/db/migrations"
         }
       ],

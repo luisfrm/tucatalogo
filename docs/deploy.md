@@ -1,18 +1,25 @@
 # Deploy y entornos
 
-Cómo se despliega TuCatálogo en Cloudflare. **Nada de esto se ha ejecutado desde
-este repositorio**: no hay credenciales ni recursos creados. Los IDs y hosts de
-`env.dev` son placeholders `REPLACE_ME_*`.
+Cómo se despliega TuCatálogo en Cloudflare. **Los recursos de prod ya existen**
+(zona, D1 `tucatalogo-prod`, R2 `tucatalogo-media-prod` y el GitHub Environment
+`prod`); los workflows se ejecutan desde GitHub, nunca desde local. Los valores de
+`env.dev` siguen siendo placeholders `REPLACE_ME_*` porque dev no se usa.
 
 Regla del proyecto: `wrangler deploy`, las migraciones remotas y los cambios de
 DNS requieren confirmación explícita del owner. No se despliega desde local.
 
-**Modelo actual: prod-only.** El repo no tiene entorno de dev automatizado ni
-GitHub Environments. El único deploy es a `env.prod`, disparado automáticamente
-por cada push a `master`/`main` (y a mano con `workflow_dispatch`), sin
-aprobaciones. `env.dev` sigue existiendo en los `wrangler.jsonc` para un deploy
-manual puntual, pero ningún workflow lo despliega. Los secretos del worker no
-viajan con el deploy: se aplican a mano con el workflow `sync-secrets`.
+**Modelo actual: prod-only.** El repo no tiene entorno de dev automatizado. El único
+deploy es a `env.prod`, disparado automáticamente por cada push a `master`/`main`
+(y a mano con `workflow_dispatch`). Los dos workflows de prod usan el **GitHub
+Environment `prod`**, que **no tiene reglas de protección ni aprobaciones**: agrupa
+los secretos y variables del destino, no añade un paso humano. `env.dev` sigue
+existiendo en los `wrangler.jsonc` para un deploy manual puntual, pero ningún
+workflow lo despliega. Los secretos del worker no viajan con el deploy: se aplican
+a mano con el workflow `sync-secrets`.
+
+> **`prod` × 2.** `--env prod` es el entorno de **Wrangler** (`env.prod` del
+> `wrangler.jsonc`); `environment: prod` es el **GitHub Environment** del que se
+> leen los 5 runtime secrets, `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST`.
 
 ## Prerrequisitos Cloudflare
 
@@ -24,51 +31,70 @@ viajan con el deploy: se aplican a mano con el workflow `sync-secrets`.
 | 4 | Token de API | Permisos de Workers Scripts y Routes (edit), D1 (edit), R2 (edit) y Zone (read); se guarda como repository secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` |
 | 5 | Resend | Dominio de envío verificado (SPF/DKIM) y API key |
 | 6 | Turnstile | Site key y secret key para los hosts del registro |
-| 7 | GitHub repo secrets/variable | `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` como *repository secrets*; los 5 runtime secrets del api (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`) también como *repository secrets*; `SMOKE_STORE_HOST` como *repository variable*. Sin Environments ni aprobaciones |
-| 8 | `INIT_TOKEN` | Aleatorio (32 bytes = 64 hex en local, dev y prod; valores distintos), guardado como Repository secret y aplicado al worker con `sync-secrets` |
+| 7 | GitHub: Environment `prod` + 2 repo secrets | **Repository secrets**: `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` (los usan todos los jobs con Environment). **Environment secrets** (`prod`): los 5 runtime secrets del api (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`). **Environment variables** (`prod`): `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST` (esta última cae en `demo.luisrivas.site` si falta). El Environment `prod` no tiene reglas de protección ni revisores |
+| 8 | `INIT_TOKEN` | Aleatorio (32 bytes = 64 hex en local, dev y prod; valores distintos), guardado como Environment secret de `prod` y aplicado al worker con `sync-secrets` |
 | 9 | Buzón de pruebas | Para E2E de OTP y reset |
 
 ## Recursos por entorno
 
 | Recurso | local | dev | prod |
 | --- | --- | --- | --- |
-| D1 | `tucatalogo-local` (Miniflare) | `tucatalogo-dev` | `tucatalogo-prod` |
-| R2 | `tucatalogo-local` (Miniflare) | `tucatalogo-media-dev` | `tucatalogo-media-prod` |
-| Host de media | `http://127.0.0.1:9797/media` | un único valor por entorno | `https://tucatalogo-bucket.luisrivas.site` |
+| D1 | `tucatalogo-local` (Miniflare) | `tucatalogo-dev` (no creado) | `tucatalogo-prod` = `ed32bca0-2ed9-4a07-97e5-018e8a15049f` (ENAM) |
+| R2 | `tucatalogo-local` (Miniflare) | `tucatalogo-media-dev` (no creado) | `tucatalogo-media-prod` (Standard) |
+| Host de media | `http://127.0.0.1:9797/media` | un único valor por entorno | `https://tucatalogo-bucket.luisrivas.site` (custom domain **pendiente**) |
 
-Crear los recursos remotos (desde `apps/api`, que es donde vive `wrangler`):
+Los recursos de prod ya están creados y `env.prod` de `apps/api/wrangler.jsonc` ya
+lleva el `database_id` real. Para un entorno nuevo o un reemplazo (desde
+`apps/api`, que es donde vive `wrangler`):
 
 ```bash
 cd apps/api
-pnpm exec wrangler d1 create tucatalogo-dev
 pnpm exec wrangler d1 create tucatalogo-prod
-pnpm exec wrangler r2 bucket create tucatalogo-media-dev
+pnpm exec wrangler d1 create tucatalogo-dev
 pnpm exec wrangler r2 bucket create tucatalogo-media-prod
+pnpm exec wrangler r2 bucket create tucatalogo-media-dev
 ```
 
-Copia cada `database_id` devuelto a `env.dev` / `env.prod` de
-`apps/api/wrangler.jsonc` (sustituye `REPLACE_ME_DEV_D1_DATABASE_ID` y
-`REPLACE_ME_PROD_D1_DATABASE_ID`). Los buckets se enlazan por nombre; no hay ID
-que copiar.
+Copia el `database_id` devuelto a `env.prod.d1_databases[0].database_id` (o a
+`REPLACE_ME_DEV_D1_DATABASE_ID` en dev) de `apps/api/wrangler.jsonc`. Los buckets se
+enlazan por nombre; no hay ID que copiar.
 
 ### Custom domain de R2
 
-En el dashboard: **R2 → bucket `tucatalogo-media-prod` → Settings → Custom
-Domains → Connect domain**, con `tucatalogo-bucket.luisrivas.site`. Cloudflare
-crea el registro DNS en la zona.
+Estado: **pendiente.** El bucket `tucatalogo-media-prod` existe, pero
+`tucatalogo-bucket.luisrivas.site` todavía **no tiene registro DNS** (verificado:
+sin respuesta y `wrangler r2 bucket domain list tucatalogo-media-prod` devuelve
+"no custom domains"). Hasta que el owner lo conecte, `MEDIA_BASE_URL` apunta a un
+host que no resuelve y las imágenes no se sirven.
 
-**Gate pendiente:** antes de publicar el bucket hay que comprobar que el wildcard
-`*.luisrivas.site` del worker `web` no intercepta
-`tucatalogo-bucket.luisrivas.site`. Si lo intercepta, no se publica el bucket
-hasta resolverlo: no existe host alternativo ni `cdn.` de reserva
-(PLAN §4.2, §12, §17).
+Conectarlo (dos vías equivalentes; ambas crean el DNS en la zona):
 
-Comprobación mínima (cuando exista el recurso):
+```bash
+cd apps/api
+pnpm exec wrangler r2 bucket domain add tucatalogo-media-prod \
+  --domain tucatalogo-bucket.luisrivas.site --zone-id <ZONE_ID> --min-tls 1.2
+pnpm exec wrangler r2 bucket domain list tucatalogo-media-prod
+```
+
+o en el dashboard: **R2 → bucket `tucatalogo-media-prod` → Settings → Custom
+Domains → Connect domain**, con `tucatalogo-bucket.luisrivas.site`.
+
+**Gate F0 (sin verificar todavía):** antes de publicar el bucket hay que comprobar
+que el wildcard `*.luisrivas.site` del worker `web` no intercepta
+`tucatalogo-bucket.luisrivas.site`. Si lo intercepta, no se publica el bucket y se
+documenta el bloqueo: no existe host alternativo ni `cdn.` de reserva
+(PLAN §4.2, §12, §17). Hoy el gate **no se puede comprobar** porque el hostname no
+existe; se valida en el mismo momento en que se crea el custom domain.
+
+Comprobación (cuando exista el recurso):
 
 ```bash
 curl -sI https://tucatalogo-bucket.luisrivas.site/
 # Debe responder R2 (404 de objeto o el objeto pedido), no el 404 del storefront.
 ```
+
+El título de la respuesta delata el origen: un `404` con el HTML del storefront
+significa que el wildcard ganó y el bucket no es alcanzable.
 
 ## Topología de `wrangler.jsonc`
 
@@ -97,12 +123,13 @@ Solo el worker `api` tiene secretos (5). **`wrangler deploy` no los aplica**: el
 deploy publica código, variables y bindings, y deja intactos los secretos ya
 cargados en el worker. Por eso los secretos no forman parte de `deploy-prod.yml`.
 
-En prod se aplican con un workflow **manual**, `sync-secrets.yml`, que lee los
-GitHub Repository secrets y ejecuta `wrangler secret put --env prod` para cada uno:
+En prod se aplican con un workflow **manual**, `sync-secrets.yml`, que corre con
+`environment: prod`, lee los **Environment secrets** de ese Environment y ejecuta
+`wrangler secret put --env prod` para cada uno:
 
 1. *Actions → Sync worker secrets → Run workflow*.
 2. `target: prod`, `confirm: sync` (sin `sync` exacto el job no corre).
-3. El workflow falla si un Repository secret falta o llega vacío, y no escribe
+3. El workflow falla si un Environment secret falta o llega vacío, y no escribe
    ningún valor en el log.
 
 Manualmente, el equivalente es:
@@ -127,35 +154,45 @@ Si haces un deploy manual de dev, repite con `--env dev` y valores **distintos**
 `env.prod` de `apps/commercial/wrangler.jsonc`. Detalle completo en
 [`env.md`](./env.md).
 
-### GitHub repo secrets y variables
+### GitHub Environment, secrets y variables
 
-Todo se configura una sola vez en **Settings → Secrets and variables → Actions**
-del repositorio. **No hay Environments**: el `--env prod` de los comandos es el
-entorno de Wrangler, no un GitHub Environment.
+**Dos niveles, a propósito:**
+
+- **Repository secrets** (`Settings → Secrets and variables → Actions → Secrets`):
+  las 2 credenciales de Cloudflare. Disponibles para cualquier job, con
+  Environment o sin él.
+- **GitHub Environment `prod`** (`Settings → Environments → prod`): los 5 runtime
+  secrets del api y las variables del destino prod. **Sin reglas de protección ni
+  revisores**: `deploy-prod.yml` sigue siendo automático en cada push.
 
 | Nombre | Tipo | Dónde | Uso |
 | --- | --- | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Repository secret | *Secrets* | wrangler: migraciones, deploy, status, D1 remoto y `secret put` |
-| `CLOUDFLARE_ACCOUNT_ID` | Repository secret | *Secrets* | idem |
-| `BETTER_AUTH_SECRET_STORE` | Repository secret | *Secrets* | Runtime secret del api; lo aplica `sync-secrets` |
-| `BETTER_AUTH_SECRET_CONSOLE` | Repository secret | *Secrets* | idem (valor distinto de `_STORE`) |
-| `INIT_TOKEN` | Repository secret | *Secrets* | idem; 32 bytes / 64 hex |
-| `RESEND_API_KEY` | Repository secret | *Secrets* | idem |
-| `TURNSTILE_SECRET_KEY` | Repository secret | *Secrets* | idem |
-| `SMOKE_STORE_HOST` | Repository variable | *Variables* | host de la tienda de bajo riesgo para el smoke del storefront (`demo.luisrivas.site`) |
+| `CLOUDFLARE_API_TOKEN` | Repository secret | *Actions → Secrets* | wrangler: migraciones, deploy, status, D1 remoto y `secret put` |
+| `CLOUDFLARE_ACCOUNT_ID` | Repository secret | *Actions → Secrets* | idem |
+| `BETTER_AUTH_SECRET_STORE` | Environment secret (`prod`) | *Environments → prod → Environment secrets* | Runtime secret del api; lo aplica `sync-secrets` |
+| `BETTER_AUTH_SECRET_CONSOLE` | Environment secret (`prod`) | idem | idem (valor distinto de `_STORE`) |
+| `INIT_TOKEN` | Environment secret (`prod`) | idem | idem; 32 bytes / 64 hex |
+| `RESEND_API_KEY` | Environment secret (`prod`) | idem | idem |
+| `TURNSTILE_SECRET_KEY` | Environment secret (`prod`) | idem | idem |
+| `TURNSTILE_SITE_KEY` | Environment variable (`prod`) | *Environments → prod → Environment variables* | `0x4AAAAAAAGF7HGDtrRDDGsww`. Valor canónico en `env.prod` de `apps/commercial/wrangler.jsonc`; la variable de GitHub es una copia informativa y no se inyecta en el build |
+| `SMOKE_STORE_HOST` | Environment variable (`prod`) o Repository variable | *Variables* | host de la tienda de bajo riesgo para el smoke del storefront, sin esquema ni ruta |
 
 El deploy corre automáticamente en cada push a `master`/`main`; no hay pausa por
 aprobación. Los secrets nunca se imprimen: se inyectan en los steps de wrangler,
 en `sync-secrets` y en el smoke. `SMOKE_STORE_HOST` es una **variable** (no
-secreta) porque el host aparece en logs; sin ella el smoke falla de forma visible.
-`TURNSTILE_SITE_KEY` no es un secreto de GitHub: es pública y vive en
-`apps/commercial/wrangler.jsonc`.
+secreta) porque el host aparece en logs.
 
-> **Antes del primer push de este cambio:** el workflow nuevo se dispara con el
-> push. Configura los dos secrets de Cloudflare y la variable **antes**, o haz el
-> primer push con `[skip ci]` en el mensaje del commit (este repo lo hizo así) y el
-> deploy no se ejecutará hasta el siguiente push. `sync-secrets` es manual: no
-> corre solo y no bloquea el deploy.
+`SMOKE_STORE_HOST` tiene un **fallback de CI**, no de runtime: si la variable no
+existe, `deploy-prod.yml` usa `demo.luisrivas.site` para no romper el deploy por un
+host de smoke. En cuanto el owner tenga una tienda real de bajo riesgo, debe crear
+la variable en `prod` (o a nivel de repo): el fallback apunta a un host que solo es
+válido mientras exista esa tienda.
+
+> **Al primer push con este modelo:** el deploy se dispara solo. Los 2 secrets de
+> Cloudflare, los 5 Environment secrets y las variables ya están creados, así que
+> el deploy corre; `sync-secrets` sigue siendo manual y **debe lanzarse después**
+> del primer deploy exitoso del `api` (el worker tiene que existir para recibir
+> `wrangler secret put`).
 
 ## Orden de deploy
 
@@ -227,16 +264,20 @@ workflow solo construye y despliega `env.prod`.
 
 ### Workflows
 
-| Workflow | Disparador | Environments | Despliega |
+| Workflow | Disparador | Environment | Despliega |
 | --- | --- | --- | --- |
 | [`ci.yml`](../.github/workflows/ci.yml) | push a `main` y PR | — | No |
-| [`deploy-prod.yml`](../.github/workflows/deploy-prod.yml) | push a `master`/`main` o `workflow_dispatch` | — (repository secrets) | `env.prod` |
-| [`sync-secrets.yml`](../.github/workflows/sync-secrets.yml) | **solo `workflow_dispatch`** (`target: prod`, `confirm: sync`) | — (repository secrets) | No despliega: `wrangler secret put --env prod` de los 5 secretos del api |
+| [`deploy-prod.yml`](../.github/workflows/deploy-prod.yml) | push a `master`/`main` o `workflow_dispatch` | `prod` (+ 2 repository secrets de Cloudflare) | `env.prod` |
+| [`sync-secrets.yml`](../.github/workflows/sync-secrets.yml) | **solo `workflow_dispatch`** (`target: prod`, `confirm: sync`) | `prod` | No despliega: `wrangler secret put --env prod` de los 5 secretos del api |
 
-- Prod-only: no existe `deploy-dev.yml` y ningún workflow despliega `env.dev`.
-- `deploy-prod.yml` es **solo deploy**: no sincroniza secretos (ver arriba).
+- Prod-only: no existe `deploy-dev.yml` y ningún workflow despliega `env.dev`. El
+  Environment `dev` existe en GitHub pero **no se usa**.
+- El Environment `prod` no tiene reglas de protección ni aprobaciones: agrupa
+  secretos y variables, no bloquea el deploy.
+- `deploy-prod.yml` es **solo deploy**: no sincroniza secretos (ver arriba). El
+  sync no está duplicado en el deploy.
 - `sync-secrets.yml` es manual por diseño y exige escribir `sync` en `confirm`;
-  sin eso el job no corre. Falla si un Repository secret falta o está vacío y no
+  sin eso el job no corre. Falla si un Environment secret falta o está vacío y no
   imprime valores.
 - `deploy-prod.yml` comparte `concurrency: group: deploy-cloud` con
   `cancel-in-progress: false`: un deploy en curso no se corta.
@@ -272,9 +313,8 @@ entorno **al construir**. Desplegar un build local con `--env prod` falla con un
 error de `targetEnvironment`; por eso cada app se reconstruye con
 `CLOUDFLARE_ENV` justo antes de su deploy.
 
-**Ninguno de estos workflows se ha ejecutado todavía**: no hay credenciales ni
-recursos creados en Cloudflare. El commit que introdujo el flujo prod-only viajó
-con `[skip ci]` para no desplegar antes de que el owner cree los secrets.
+**Ninguno de estos workflows se ha ejecutado todavía** en la versión actual: el
+primer push de este cambio es el que estrena el Environment `prod` en CI.
 
 ## Smoke
 
@@ -286,9 +326,9 @@ con `[skip ci]` para no desplegar antes de que el owner cree los secrets.
 
 - `env.dev` no tiene smoke automático: su workflow ya no existe.
 - En prod el storefront no tiene host fijo (depende del slug), así que el
-  workflow exige la repository variable `SMOKE_STORE_HOST` (p. ej.
-  `demo.luisrivas.site`, una tienda de bajo riesgo). Si falta, el step falla de
-  forma visible.
+  workflow lee la variable `SMOKE_STORE_HOST` (p. ej. `demo.luisrivas.site`, una
+  tienda de bajo riesgo). Si la variable no existe, cae en `demo.luisrivas.site`
+  para no romper el deploy; el owner debe crearla cuando tenga una tienda real.
 - `/health` de cada frontend valida `ENVIRONMENT` y `APP_DOMAIN` (200 o 503).
 - El `<subdominio>` workers.dev que usaba el smoke de dev ya no se consulta: el
   workflow no llama a la API de Cloudflare para descubrirlo.
@@ -371,22 +411,30 @@ se vuelve a iniciar sesión en el host nuevo.
 
 ## Pendiente cloud
 
-- **Workflows creados pero nunca ejecutados**: no hay credenciales ni recursos.
-  Son tres: `ci.yml`, `deploy-prod.yml` y `sync-secrets.yml`.
-- Repository secrets `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`, los 5
-  runtime secrets del api (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`,
-  `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`), y repository variable
-  `SMOKE_STORE_HOST`. Sin Environments ni aprobaciones.
-- Secretos del worker api en prod: se aplican con el workflow manual
-  `sync-secrets` (`wrangler secret put --env prod`) después del primer deploy del
-  api. En dev (deploy manual) se aplican con `--env dev` y valores distintos.
-- IDs reales de D1 (`REPLACE_ME_DEV_D1_DATABASE_ID` /
-  `REPLACE_ME_PROD_D1_DATABASE_ID`) y hosts de `env.dev`.
-- Gate wildcard vs custom domain de R2.
-- `TURNSTILE_SITE_KEY` en `env.dev` de `commercial` (la de prod ya está fijada:
-  `0x4AAAAAAAGF7HGDtrRDDGsww`).
-- Primer deploy real de los frontends con `CLOUDFLARE_ENV` (validar que rutas,
+- **Workflows sin ejecutar**: `ci.yml`, `deploy-prod.yml` y `sync-secrets.yml`
+  existen, pero la primera ejecución real de prod es la del primer push.
+- **Hecho en Cloudflare:** zona `luisrivas.site`, D1 `tucatalogo-prod`
+  (`ed32bca0-2ed9-4a07-97e5-018e8a15049f`, ENAM) y R2 `tucatalogo-media-prod`.
+- **Pendiente en Cloudflare:**
+  - Custom domain `tucatalogo-bucket.luisrivas.site` del bucket de prod y, con él,
+    el **gate wildcard vs bucket** (F0). Sin DNS el host no resuelve.
+  - Turnstile: confirmar que los hostnames del widget incluyen
+    `tucatalogo.luisrivas.site`.
+  - Resend: dominio de envío `luisrivas.site` verificado (SPF/DKIM) con la API key
+    del Environment secret.
+  - Redirect Rules 301 del ápice y `www` hacia el commercial.
+- **En GitHub:** Environment `prod` creado con los 5 Environment secrets
+  (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`,
+  `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`), la variable `TURNSTILE_SITE_KEY` y los
+  2 Repository secrets de Cloudflare. Falta `SMOKE_STORE_HOST` como variable: hoy
+  se usa el fallback `demo.luisrivas.site`.
+- **Secretos del worker api en prod:** se aplican con el workflow manual
+  `sync-secrets` (`wrangler secret put --env prod`) **después** del primer deploy
+  del api.
+- **`env.dev`:** sigue en placeholders (`REPLACE_ME_DEV_*`) y no se usa. Si alguna
+  vez se despliega a mano, se aplican secretos con `--env dev` y valores distintos.
+- **Primer deploy real de los frontends con `CLOUDFLARE_ENV`** (validar que rutas,
   bindings y vars del entorno llegan al build generado).
-- Smoke real del API por service binding: requiere una ruta de smoke en un
+- **Smoke real del API por service binding:** requiere una ruta de smoke en un
   frontend (hoy no existe; el workflow comprueba deployment + D1).
-- Turnstile, Resend y Lighthouse/axe contra prod.
+- **Lighthouse/axe contra prod.**

@@ -1,9 +1,15 @@
 name: Deploy prod
 
 # Prod-only: cada push a la línea principal despliega de forma automática.
-# No hay GitHub Environments ni aprobaciones. Las credenciales son repository
-# secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) y `SMOKE_STORE_HOST`
-# es una repository variable (Settings → Secrets and variables → Actions).
+#
+# GitHub Environment `prod`: sin reglas de protección ni aprobaciones, se usa para
+# agrupar los secretos de runtime y las variables del destino prod.
+#   - Environment secrets (prod): los 5 del api → los aplica `sync-secrets.yml`.
+#   - Environment vars (prod): `TURNSTILE_SITE_KEY` (informativa; el valor real
+#     del widget vive en `apps/commercial/wrangler.jsonc`) y `SMOKE_STORE_HOST`.
+#   - Repository secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. Son
+#     accesibles desde cualquier job con Environment y siguen siendo la única
+#     credencial de Cloudflare del repo.
 # Este workflow es **solo deploy**: `wrangler deploy` no aplica secretos, así que
 # los 5 runtime secrets del api se sincronizan a mano con `sync-secrets.yml`.
 # Un commit cuyo mensaje lleve `[skip ci]` no dispara este workflow.
@@ -25,6 +31,11 @@ jobs:
     name: Deploy prod
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Environment `prod`: agrupa los 5 runtime secrets del api, `TURNSTILE_SITE_KEY`
+    # y `SMOKE_STORE_HOST`. No tiene reglas de protección ni revisores: el deploy
+    # sigue siendo automático en cada push a la línea principal.
+    environment:
+      name: prod
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -120,11 +131,12 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # Repository variable (Settings → Secrets and variables → Actions →
-          # Variables): tienda de bajo riesgo para el smoke del storefront
-          # (p. ej. "demo.luisrivas.site"). Sin ella no hay host de web que
-          # probar: el step falla de forma visible.
-          SMOKE_STORE_HOST: ${{ vars.SMOKE_STORE_HOST }}
+          # Variable del Environment `prod` (Settings → Environments → prod →
+          # Environment variables), no un secreto. Es la tienda de bajo riesgo
+          # para el smoke del storefront. Mientras no haya una tienda real, el
+          # fallback `demo.luisrivas.site` mantiene el step vivo; en cuanto el
+          # owner cree la variable (en `prod` o a nivel de repo) su valor gana.
+          SMOKE_STORE_HOST: ${{ vars.SMOKE_STORE_HOST || 'demo.luisrivas.site' }}
         run: |
           set -euo pipefail
 

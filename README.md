@@ -11,8 +11,10 @@ tienda**: se publica en `slug.luisrivas.site`, el dueño la administra en
 
 **Estado actual:** F1 (monorepo), F2 (API y auth), F3 (commercial), F4 (storefront
 y temas), F5 (`/panel-admin`) y F6 (console) están implementados. `docs/` y los
-tres workflows (`ci.yml`, `deploy-prod.yml`, `sync-secrets.yml`) existen; el deploy
-a Cloudflare y los IDs reales siguen pendientes (ver
+tres workflows (`ci.yml`, `deploy-prod.yml`, `sync-secrets.yml`) existen. En
+Cloudflare ya están provisionados la zona, D1 `tucatalogo-prod` y R2
+`tucatalogo-media-prod`, y en GitHub el Environment `prod` con los 5 runtime secrets;
+queda el primer deploy y el custom domain del bucket (ver
 [`docs/deploy.md`](./docs/deploy.md)).
 
 ## Stack
@@ -309,20 +311,30 @@ Convenciones:
 
 ## Pendiente cloud
 
-Sin validar en este repositorio (no hay credenciales ni deploy):
+Recursos de prod ya provisionados (D1 `tucatalogo-prod`, R2
+`tucatalogo-media-prod`, GitHub Environment `prod`). Lo que falta:
 
-- IDs reales de D1 (`REPLACE_ME_*_D1_DATABASE_ID`) y hosts de `env.dev`.
-- Gate del custom domain de R2 frente al wildcard `*.luisrivas.site`.
-- Deploy **prod-only**: `deploy-prod.yml` despliega en cada push a `master`/`main`,
-  sin approval ni Environment. Faltan los repository secrets
-  `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` y la repository variable
-  `SMOKE_STORE_HOST`; el workflow nunca se ha ejecutado.
+- Custom domain `tucatalogo-bucket.luisrivas.site` del bucket de prod y, con él, el
+  gate del wildcard `*.luisrivas.site` frente al bucket (F0). Hoy el hostname no
+  resuelve.
+- Hosts de `env.dev` y `REPLACE_ME_DEV_D1_DATABASE_ID`: dev no se usa y sigue en
+  placeholders.
+- Deploy **prod-only**: `deploy-prod.yml` despliega en cada push a `master`/`main`
+  con el GitHub **Environment `prod`** (sin reglas de protección ni aprobaciones).
+  Credenciales: 2 **repository secrets** (`CLOUDFLARE_API_TOKEN`,
+  `CLOUDFLARE_ACCOUNT_ID`); los 5 runtime secrets y las variables
+  (`TURNSTILE_SITE_KEY`, `SMOKE_STORE_HOST`) viven en el Environment `prod`.
+  `SMOKE_STORE_HOST` cae en `demo.luisrivas.site` mientras no exista la variable:
+  el owner debe crearla cuando tenga una tienda real de bajo riesgo.
 - Secretos de runtime del api: los 5 (`BETTER_AUTH_SECRET_STORE`,
   `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`,
-  `TURNSTILE_SECRET_KEY`) son **GitHub Repository secrets** y se aplican con el
-  workflow **manual** `sync-secrets` (`wrangler secret put --env prod`).
-  `wrangler deploy` no aplica secretos. No hay GitHub Environments: el `--env prod`
-  es de Wrangler. La `TURNSTILE_SITE_KEY` de prod es pública y vive en
-  `apps/commercial/wrangler.jsonc`.
-- Turnstile y Resend reales (local usa `test` y `memory`).
-- Lighthouse/axe formal sobre dev/prod.
+  `TURNSTILE_SECRET_KEY`) son **Environment secrets de `prod`** y se aplican con el
+  workflow **manual** `sync-secrets` (`target: prod`, `confirm: sync`), que ejecuta
+  `wrangler secret put --env prod`. `wrangler deploy` no aplica secretos. Ojo:
+  `--env prod` es de Wrangler, el `environment: prod` es de GitHub. La
+  `TURNSTILE_SITE_KEY` de prod es pública y vive en
+  `apps/commercial/wrangler.jsonc` (el Environment `prod` guarda una copia
+  informativa).
+- Turnstile y Resend reales (local usa `test` y `memory`): confirmar hostnames del
+  widget y dominio de envío verificado.
+- Primer deploy real y Lighthouse/axe formal sobre prod.

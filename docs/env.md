@@ -9,7 +9,7 @@ no contiene secretos reales: donde aplica se usa `REPLACE_ME_*`.
 | Entorno | Variables no secretas | Secretos |
 | --- | --- | --- |
 | local | `vars` del `wrangler.jsonc` + `.dev.vars` (gitignored) | `apps/api/.dev.vars` |
-| dev/prod | `vars` de `env.dev` / `env.prod` | `wrangler secret put <NAME> --env <dev\|prod>`; en prod lo ejecuta el workflow manual `sync-secrets` desde GitHub Repository secrets |
+| dev/prod | `vars` de `env.dev` / `env.prod` | `wrangler secret put <NAME> --env <dev\|prod>`; en prod lo ejecuta el workflow manual `sync-secrets` desde los **Environment secrets del GitHub Environment `prod`** |
 
 - En local, `.dev.vars` **tiene prioridad** sobre `vars`. Por eso el
   `wrangler.jsonc` del API declara `EMAIL_DRIVER=console` y el `.dev.vars` de
@@ -24,10 +24,12 @@ no contiene secretos reales: donde aplica se usa `REPLACE_ME_*`.
   recursos.
 - **Quién los define:** el owner del repo fija las variables de dev/prod en
   `wrangler.jsonc`; los 5 secretos de runtime de prod se guardan como
-  **GitHub Repository secrets** y se aplican al worker con el workflow manual
-  `sync-secrets.yml` (`wrangler secret put --env prod`). En dev, si se despliega
-  a mano, se usan `wrangler secret put --env dev` con valores distintos. Cada dev
-  define sus valores locales en su `.dev.vars` (nunca se versionan).
+  **Environment secrets del GitHub Environment `prod`** y se aplican al worker con
+  el workflow manual `sync-secrets.yml` (`wrangler secret put --env prod`). El
+  Environment `prod` no tiene reglas de protección ni aprobaciones: agrupa
+  secretos y variables por destino, no añade un paso humano. En dev, si se
+  despliega a mano, se usan `wrangler secret put --env dev` con valores distintos.
+  Cada dev define sus valores locales en su `.dev.vars` (nunca se versionan).
 
 ## Reglas
 
@@ -72,16 +74,16 @@ Leyenda de tipo: **var** = configuración no secreta; **secreto** = Worker secre
 | `EMAIL_DRIVER` | `memory` (ejemplo) / `console` (`wrangler.jsonc`) | `resend` | `resend` | var | `memory` \| `console` \| `resend`; ausente o desconocida → 503 |
 | `EMAIL_FROM` | `TuCatálogo <no-reply@localhost>` | `REPLACE_ME_DEV_EMAIL_FROM` | `TuCatálogo <no-reply@luisrivas.site>` | var | Obligatorio con `resend` |
 | `RESEND_FROM` | — (comentado) | — | — | var | Si existe, tiene prioridad sobre `EMAIL_FROM` |
-| `RESEND_API_KEY` | — | secreto | secreto (Repository secret → `sync-secrets`) | secreto | Obligatorio con `EMAIL_DRIVER=resend`; sin él → 503 |
+| `RESEND_API_KEY` | — | secreto | secreto (Environment secret `prod` → `sync-secrets`) | secreto | Obligatorio con `EMAIL_DRIVER=resend`; sin él → 503 |
 | `TURNSTILE_MODE` | `test` | `enabled` | `enabled` | var | `test` \| `enabled` \| `disabled` (solo local) |
-| `TURNSTILE_SECRET_KEY` | `1x0000000000000000000000000000000AA` (clave oficial de prueba) | secreto | secreto (Repository secret → `sync-secrets`) | secreto | Obligatorio con `enabled` |
+| `TURNSTILE_SECRET_KEY` | `1x0000000000000000000000000000000AA` (clave oficial de prueba) | secreto | secreto (Environment secret `prod` → `sync-secrets`) | secreto | Obligatorio con `enabled` |
 | `TURNSTILE_SITE_KEY` | `1x00000000000000000000AA` | — | — | var | Declarada en `Env`; el API no la lee (la usa commercial) |
 | `STORE_ORIGIN_TEMPLATE` | `http://{slug}.localhost:5173` | `https://REPLACE_ME_DEV_WEB_ORIGIN` | `https://{slug}.luisrivas.site` | var | Origen del enlace de reset de tienda |
 | `CONSOLE_ORIGIN` | `http://localhost:5175` | `https://REPLACE_ME_DEV_CONSOLE_ORIGIN` | `https://console-tucatalogo.luisrivas.site` | var | Origen del enlace de reset del console |
-| `BETTER_AUTH_SECRET_STORE` | `.dev.vars` (32+ bytes) | secreto | secreto (Repository secret → `sync-secrets`) | secreto | Reino tienda; distinto por entorno |
-| `BETTER_AUTH_SECRET_CONSOLE` | `.dev.vars` (32+ bytes) | secreto | secreto (Repository secret → `sync-secrets`) | secreto | Reino console; distinto por entorno |
-| `INIT_TOKEN` | `.dev.vars` (32 bytes / 64 hex; valor local en la regla 5) | secreto (32 bytes / 64 hex) | secreto (32 bytes / 64 hex; Repository secret → `sync-secrets`) | secreto | Solo esta app; rotación en el runbook |
-| `DB` | `tucatalogo-local` | `tucatalogo-dev` | `tucatalogo-prod` | binding | D1 (`database_id` de dev/prod es `REPLACE_ME_*`) |
+| `BETTER_AUTH_SECRET_STORE` | `.dev.vars` (32+ bytes) | secreto | secreto (Environment secret `prod` → `sync-secrets`) | secreto | Reino tienda; distinto por entorno |
+| `BETTER_AUTH_SECRET_CONSOLE` | `.dev.vars` (32+ bytes) | secreto | secreto (Environment secret `prod` → `sync-secrets`) | secreto | Reino console; distinto por entorno |
+| `INIT_TOKEN` | `.dev.vars` (32 bytes / 64 hex; valor local en la regla 5) | secreto (32 bytes / 64 hex) | secreto (32 bytes / 64 hex; Environment secret `prod` → `sync-secrets`) | secreto | Solo esta app; rotación en el runbook |
+| `DB` | `tucatalogo-local` | `tucatalogo-dev` | `tucatalogo-prod` | binding | D1. El `database_id` real de prod es `ed32bca0-2ed9-4a07-97e5-018e8a15049f`; el de dev sigue como `REPLACE_ME_DEV_D1_DATABASE_ID` |
 | `MEDIA_BUCKET` | `tucatalogo-local` | `tucatalogo-media-dev` | `tucatalogo-media-prod` | binding | R2 |
 
 ### `apps/web`
@@ -132,36 +134,54 @@ Sin secretos: el `INIT_TOKEN` llega del formulario `/init`.
 ## Variables solo de CI (GitHub)
 
 **Deploy prod-only:** `deploy-prod.yml` corre automáticamente en cada push a
-`master`/`main` (y por `workflow_dispatch`). **No hay GitHub Environments ni
-aprobaciones**: todo vive en el repositorio. El `--env prod` que aparece en los
-comandos es el entorno de **Wrangler** (`env.prod` del `wrangler.jsonc`), no un
-Environment de GitHub.
+`master`/`main` (y por `workflow_dispatch`). Usa el **GitHub Environment `prod`**,
+que **no tiene reglas de protección ni aprobaciones**: el deploy no espera a nadie.
+Ojo con la homonimia: el `--env prod` de los comandos es el entorno de **Wrangler**
+(`env.prod` del `wrangler.jsonc`); el `environment: prod` de los workflows es el
+Environment de **GitHub** del que se leen secretos y variables.
 
 **`wrangler deploy` no aplica secretos.** Los secretos del worker se cargan una
 vez, sobreviven a los deploys y se cambian solo con `wrangler secret put`. Por eso
-los 5 runtime secrets del api viven también como *Repository secrets* y se aplican
-con el workflow **manual** [`sync-secrets.yml`](../.github/workflows/sync-secrets.yml)
-(`target: prod`, `confirm: sync`).
+los 5 runtime secrets del api viven también como **Environment secrets de `prod`** y
+se aplican con el workflow **manual**
+[`sync-secrets.yml`](../.github/workflows/sync-secrets.yml) (`target: prod`,
+`confirm: sync`).
+
+Hay dos niveles de credenciales a propósito:
+
+- **2 Repository secrets** de Cloudflare, compartidos por cualquier job y no
+  atados a un entorno concreto.
+- **5 Environment secrets** de runtime en `prod`, que solo existen como worker
+  secrets del api y se copian con `sync-secrets`.
 
 | Nombre | Tipo | Dónde | Uso |
 | --- | --- | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | Repository secret | *Settings → Secrets and variables → Actions → Secrets* | wrangler: migraciones, deploy, status y D1 remoto |
 | `CLOUDFLARE_ACCOUNT_ID` | Repository secret | idem | idem |
-| `BETTER_AUTH_SECRET_STORE` | Repository secret | idem | Se copia al worker api con `sync-secrets` (`wrangler secret put --env prod`) |
-| `BETTER_AUTH_SECRET_CONSOLE` | Repository secret | idem | idem; valor **distinto** de `_STORE` |
-| `INIT_TOKEN` | Repository secret | idem | idem; 32 bytes / 64 hex aleatorio |
-| `RESEND_API_KEY` | Repository secret | idem | idem |
-| `TURNSTILE_SECRET_KEY` | Repository secret | idem | idem |
-| `SMOKE_STORE_HOST` | Repository variable | *Settings → Secrets and variables → Actions → Variables* | Host de la tienda de bajo riesgo para el smoke del storefront (`demo.luisrivas.site`). Sin esquema ni ruta |
+| `BETTER_AUTH_SECRET_STORE` | Environment secret (`prod`) | *Settings → Environments → prod → Environment secrets* | Se copia al worker api con `sync-secrets` (`wrangler secret put --env prod`) |
+| `BETTER_AUTH_SECRET_CONSOLE` | Environment secret (`prod`) | idem | idem; valor **distinto** de `_STORE` |
+| `INIT_TOKEN` | Environment secret (`prod`) | idem | idem; 32 bytes / 64 hex aleatorio |
+| `RESEND_API_KEY` | Environment secret (`prod`) | idem | idem |
+| `TURNSTILE_SECRET_KEY` | Environment secret (`prod`) | idem | idem |
+| `TURNSTILE_SITE_KEY` | Environment variable (`prod`) | *Settings → Environments → prod → Environment variables* | `0x4AAAAAAAGF7HGDtrRDDGsww`. Copia informativa: el valor que usa el widget es el de `env.prod` de `apps/commercial/wrangler.jsonc` |
+| `SMOKE_STORE_HOST` | Environment variable (`prod`) o Repository variable | *Variables* | Host de la tienda de bajo riesgo para el smoke del storefront, sin esquema ni ruta. Si no existe, el workflow cae en `demo.luisrivas.site` |
 
-`TURNSTILE_SITE_KEY` **no** está en esta lista: es pública y vive en
-`apps/commercial/wrangler.jsonc` (`env.prod`).
+`TURNSTILE_SITE_KEY` es pública: el valor canónico vive en
+`apps/commercial/wrangler.jsonc` (`env.prod`) y la variable de GitHub `prod` es una
+copia para tener el destino prod completo en un solo sitio. No se inyecta en el
+build ni sustituye al `wrangler.jsonc`.
+
+`SMOKE_STORE_HOST` tiene un **fallback de CI**, no de runtime: mientras el owner no
+cree la variable (en el Environment `prod` o a nivel de repo), el smoke apunta a
+`demo.luisrivas.site`. En cuanto exista una tienda real de bajo riesgo, el owner
+debe crear la variable: un host que no existe hace fallar el smoke y con él el
+deploy.
 
 Nada de esto se guarda en el repositorio ni en `.dev.vars`. Hay tres workflows en
 `.github/workflows/` (`ci.yml`, `deploy-prod.yml` y `sync-secrets.yml`); no existe
-`deploy-dev.yml` ni ningún Environment. Ningún workflow se ha ejecutado todavía
-(sin credenciales ni recursos Cloudflare): hasta que el owner cree los secrets y
-la variable, los workflows fallan de forma visible.
+`deploy-dev.yml`. `ci.yml` no usa Environment; `deploy-prod.yml` y `sync-secrets.yml`
+sí (`prod`). El Environment `dev` existe en GitHub y **no se usa**: ningún workflow
+despliega `env.dev`.
 
 ## Variables de test
 
@@ -174,7 +194,8 @@ dependen de la red.
 
 En `wrangler.jsonc` de `apps/api`:
 
-- `REPLACE_ME_DEV_D1_DATABASE_ID` y `REPLACE_ME_PROD_D1_DATABASE_ID`.
+- `REPLACE_ME_DEV_D1_DATABASE_ID`. El de prod ya está fijado:
+  `tucatalogo-prod` = `ed32bca0-2ed9-4a07-97e5-018e8a15049f` (región ENAM).
 - `REPLACE_ME_DEV_STOREFRONT_HOST`, `REPLACE_ME_DEV_MEDIA_BASE_URL`,
   `REPLACE_ME_DEV_EMAIL_FROM`, `REPLACE_ME_DEV_WEB_ORIGIN`,
   `REPLACE_ME_DEV_CONSOLE_ORIGIN`.
@@ -183,5 +204,8 @@ En `apps/web` y `apps/commercial`: `REPLACE_ME_DEV_STOREFRONT_HOST` (`APP_DOMAIN
 y `REPLACE_ME_DEV_MEDIA_BASE_URL`. En `apps/console`:
 `REPLACE_ME_DEV_CONSOLE_HOST` (`APP_DOMAIN`) y `REPLACE_ME_DEV_MEDIA_BASE_URL`.
 
-Ningún ID, dominio de dev ni clave real se versiona. Ver
+`env.prod` ya no tiene placeholders: D1 (`tucatalogo-prod`), R2
+(`tucatalogo-media-prod`), `APP_DOMAIN`, `MEDIA_BASE_URL`, `EMAIL_*`,
+`TURNSTILE_MODE`, `TURNSTILE_SITE_KEY`, `STORE_ORIGIN_TEMPLATE` y `CONSOLE_ORIGIN`
+tienen valor real. Ningún ID, dominio de dev ni clave real de dev se versiona. Ver
 [`deploy.md`](./deploy.md) para el orden de sustitución y de deploy.

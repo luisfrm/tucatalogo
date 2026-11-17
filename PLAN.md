@@ -992,22 +992,26 @@ Nombres reales en `wrangler.jsonc`: `tucatalogo-{api,web,commercial,console}-{de
 
 ### 13.2 Workflows (implementados, sin ejecutar en cloud)
 
-Modelo **prod-only**: no hay workflow de dev ni GitHub Environments. El deploy de
-prod es automático en cada push a la línea principal, sin aprobaciones.
+Modelo **prod-only**: no hay workflow de dev. Los workflows de prod usan el
+**GitHub Environment `prod`**, que **no tiene reglas de protección ni
+aprobaciones**: agrupa los 5 runtime secrets del api y las variables del destino,
+no añade un paso humano. El deploy sigue siendo automático en cada push a la línea
+principal.
 
 | Workflow | Disparador | Environment | Pasos |
 | --- | --- | --- | --- |
 | `ci.yml` | PR y push a `main` | — | install con lockfile → lint → typecheck → test → build; no despliega |
-| `deploy-prod.yml` | push a `master`/`main` o `workflow_dispatch` | — (repository secrets) | install → check A1 → `pnpm audit --prod --audit-level=high` → lint → typecheck → test → build → migraciones D1 prod → deploy api → web → commercial → console → deployment/D1 del API → smoke prod con `SMOKE_STORE_HOST` |
-| `sync-secrets.yml` | **solo `workflow_dispatch`** (input `target` = `prod` + `confirm` = `sync`) | — (repository secrets) | install → `wrangler secret put <NAME> --env prod` para los 5 runtime secrets del api |
+| `deploy-prod.yml` | push a `master`/`main` o `workflow_dispatch` | `prod` (+ 2 repository secrets de Cloudflare) | install → check A1 → `pnpm audit --prod --audit-level=high` → lint → typecheck → test → build → migraciones D1 prod → deploy api → web → commercial → console → deployment/D1 del API → smoke prod con `SMOKE_STORE_HOST` |
+| `sync-secrets.yml` | **solo `workflow_dispatch`** (input `target` = `prod` + `confirm` = `sync`) | `prod` | install → `wrangler secret put <NAME> --env prod` para los 5 runtime secrets del api |
 
 - Un solo deploy con `concurrency: deploy-cloud` y `cancel-in-progress: false`: un deploy en curso no se corta.
 - `pnpm audit --prod --audit-level=high` corre en el workflow: una vulnerabilidad high/critical (o un fallo de la consulta) detiene el deploy de forma visible.
 - Un fallo de migración detiene el deploy antes de desplegar código.
 - **API sin host público:** el smoke no puede hacer `curl` a `/health` del API. El workflow comprueba `wrangler deployments status` (deployment activo) y `d1 execute … SELECT 1` (D1 remoto); `/health` del API se ejercita en tests y en local. Un smoke real por service binding requiere una ruta en un frontend que llame al API (trabajo de F7 de las apps).
-- **Credenciales:** `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` son *repository secrets*; `SMOKE_STORE_HOST` es *repository variable*. Sin Environments ni revisores.
-- **Secretos ≠ deploy:** `wrangler deploy` no aplica secretos. `deploy-prod.yml` es **solo deploy**; los 5 runtime secrets del api viven también como *Repository secrets* y se aplican con el workflow **manual** `sync-secrets.yml` (`wrangler secret put --env prod`). No hay GitHub Environments: el `--env prod` es de Wrangler.
-- **Estado real:** `ci.yml` corre en PR/push; `deploy-prod.yml` y `sync-secrets.yml` no se han ejecutado nunca (sin credenciales ni recursos Cloudflare). El commit que introdujo el flujo prod-only llevó `[skip ci]` para no desplegar antes de configurar los secrets.
+- **Credenciales en dos niveles:** `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` son *repository secrets* (accesibles desde cualquier job con Environment); los 5 runtime secrets del api son *Environment secrets* de `prod`; `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST` son *Environment variables* de `prod` (`SMOKE_STORE_HOST` también vale a nivel de repo). El Environment `dev` existe y no se usa.
+- **`SMOKE_STORE_HOST` con fallback de CI:** si la variable no existe, el smoke apunta a `demo.luisrivas.site` para no tumbar el deploy. Es un fallback de CI, no de runtime: el owner debe crear la variable cuando tenga una tienda real de bajo riesgo.
+- **Secretos ≠ deploy:** `wrangler deploy` no aplica secretos. `deploy-prod.yml` es **solo deploy** y no duplica el sync; los 5 runtime secrets del api se aplican con el workflow **manual** `sync-secrets.yml` (`wrangler secret put --env prod`). Ojo con la homonimia: `--env prod` es el entorno de **Wrangler**, `environment: prod` es el de **GitHub**.
+- **Estado real:** `ci.yml` corre en PR/push; `deploy-prod.yml` y `sync-secrets.yml` no se han ejecutado nunca. Recursos ya creados: zona `luisrivas.site`, D1 `tucatalogo-prod` (`ed32bca0-2ed9-4a07-97e5-018e8a15049f`) y R2 `tucatalogo-media-prod`.
 - Scripts reales: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm db:migrate:local` y `pnpm db:seed:local`. Las migraciones remotas se ejecutan con `wrangler d1 migrations apply <db> --remote --env <env>` desde el workflow (no hay script `db:migrate:<env>`).
 
 ### 13.3 Migraciones
@@ -1039,20 +1043,21 @@ deploy automático no toca secretos y no los borra.
 | --- | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | Repository secret de GitHub | Owner del repo |
 | `CLOUDFLARE_ACCOUNT_ID` | Repository secret de GitHub | Owner del repo |
-| `BETTER_AUTH_SECRET_STORE` | Repository secret de GitHub → Worker secret (**solo** `api`), por `sync-secrets` | Owner, distinto por entorno |
-| `BETTER_AUTH_SECRET_CONSOLE` | Repository secret de GitHub → Worker secret (**solo** `api`), por `sync-secrets` | Owner, distinto por entorno |
-| `RESEND_API_KEY` | Repository secret de GitHub → Worker secret (api), por `sync-secrets` | Owner |
-| `TURNSTILE_SECRET_KEY` | Repository secret de GitHub → Worker secret (api), por `sync-secrets` | Owner |
-| `INIT_TOKEN` | Repository secret de GitHub → Worker secret (**solo** `api`), por `sync-secrets` | Owner, generado aleatorio |
-| `SMOKE_STORE_HOST` | Repository variable de GitHub (no secreta) | Owner: host de la tienda de bajo riesgo para el smoke de prod |
-| `TURNSTILE_SITE_KEY` | Variable pública de `apps/commercial/wrangler.jsonc` (`env.prod`) | Owner; no es secreta y no va en GitHub |
+| `BETTER_AUTH_SECRET_STORE` | Environment secret (`prod`) → Worker secret (**solo** `api`), por `sync-secrets` | Owner, distinto por entorno |
+| `BETTER_AUTH_SECRET_CONSOLE` | Environment secret (`prod`) → Worker secret (**solo** `api`), por `sync-secrets` | Owner, distinto por entorno |
+| `RESEND_API_KEY` | Environment secret (`prod`) → Worker secret (api), por `sync-secrets` | Owner |
+| `TURNSTILE_SECRET_KEY` | Environment secret (`prod`) → Worker secret (api), por `sync-secrets` | Owner |
+| `INIT_TOKEN` | Environment secret (`prod`) → Worker secret (**solo** `api`), por `sync-secrets` | Owner, generado aleatorio |
+| `SMOKE_STORE_HOST` | Environment variable (`prod`) —también admite Repository variable— (no secreta) | Owner: host de la tienda de bajo riesgo para el smoke de prod. Sin ella el workflow usa `demo.luisrivas.site` |
+| `TURNSTILE_SITE_KEY` | Variable pública de `apps/commercial/wrangler.jsonc` (`env.prod`); copia informativa como Environment variable (`prod`) | Owner; no es secreta. El valor que usa el widget es el del `wrangler.jsonc` |
 | `MEDIA_BASE_URL` | Variable por entorno (**un solo valor**) | Owner. Valores en el cuadro siguiente |
 
-Los 5 runtime secrets se guardan **una vez** como *Repository secrets* y se
-aplican al worker con el workflow **manual** `sync-secrets.yml`
-(`wrangler secret put <NAME> --env prod`). Es manual a propósito: `wrangler deploy`
-no aplica secretos, y escribir secretos en cada push no aporta nada. No hay GitHub
-Environments en ningún punto del flujo.
+Los 5 runtime secrets se guardan **una vez** como *Environment secrets* del GitHub
+Environment `prod` y se aplican al worker con el workflow **manual**
+`sync-secrets.yml` (`wrangler secret put <NAME> --env prod`). Es manual a propósito:
+`wrangler deploy` no aplica secretos, y escribir secretos en cada push no aporta
+nada. El Environment `prod` no tiene reglas de protección ni aprobaciones: agrupa
+secretos y variables por destino. El Environment `dev` existe y no se usa.
 
 El console **no** guarda `INIT_TOKEN` ni secretos de auth: recibe el token del formulario `/init` y lo reenvía por service binding; la comparación en tiempo constante ocurre en el api.
 
@@ -1198,9 +1203,9 @@ Antes de F1:
 4. Token de API de Cloudflare con permisos de Workers (scripts y rutas), D1 y R2, más lectura de zona. Guardado como repository secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`.
 5. Resend con el dominio de envío verificado (SPF/DKIM) y una API key.
 6. Turnstile: site key (pública, en `apps/commercial/wrangler.jsonc`) y secret key (secreto del api) creadas para los hosts del registro.
-7. Repositorio en GitHub con los repository secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`, los 5 runtime secrets del api (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`) y la repository variable `SMOKE_STORE_HOST`. Deploy prod-only, sin Environments ni aprobaciones; los runtime secrets se aplican con el workflow manual `sync-secrets`.
-8. `INIT_TOKEN` generado (aleatorio, ≥ 32 bytes) y guardado como repository secret; no se versiona.
-9. **Validar `tucatalogo-bucket.luisrivas.site`**: crear el custom domain de R2 y comprobar que el wildcard de `web` no lo intercepta. Es un gate de F0, no de F1.
+7. Repositorio en GitHub con los repository secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`, y un GitHub Environment `prod` (sin reglas de protección ni aprobaciones) con los 5 runtime secrets del api como *Environment secrets* (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`) y las variables `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST`. Deploy prod-only; los runtime secrets se aplican con el workflow manual `sync-secrets`.
+8. `INIT_TOKEN` generado (aleatorio, ≥ 32 bytes) y guardado como Environment secret de `prod`; no se versiona.
+9. **Validar `tucatalogo-bucket.luisrivas.site`**: crear el custom domain de R2 y comprobar que el wildcard de `web` no lo intercepta. Es un gate de F0, no de F1. Estado: bucket creado, custom domain **pendiente** (el hostname aún no resuelve).
 10. Cuentas de correo de prueba y un buzón accesible para E2E de OTP y reset.
 
 ---
