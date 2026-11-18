@@ -76,7 +76,6 @@ function unwrap(result: unknown): Unwrapped {
 }
 
 const INIT_FORM = {
-  initToken: "init-token",
   name: "Admin QA",
   email: "admin@example.test",
   password: "ClaveLarga2026!",

@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 
 import { expectNoSeriousA11yViolations } from "../lib/axe";
-import { API_URL, CONSOLE_URL, INIT_TOKEN, panelUrl, storefrontUrl } from "../lib/config";
+import { API_URL, CONSOLE_URL, panelUrl, storefrontUrl } from "../lib/config";
 import { waitForResetUrl } from "../lib/outbox";
 import { currentTotp, secretFromTotpUri } from "../lib/totp";
 import {
@@ -41,12 +41,11 @@ async function initAvailable(): Promise<boolean> {
 /**
  * `POST /init` desde la propia página del console, sin seguir el redirect.
  * El API comprueba primero si ya hay admin, así que con el alta consumida el
- * status es 410 aunque el token sea válido.
+ * status es 410 (no hay credencial compartida que validar).
  */
 async function secondInitStatus(page: Page): Promise<number> {
-  return page.evaluate(async (token) => {
+  return page.evaluate(async () => {
     const body = new URLSearchParams({
-      initToken: token,
       name: "Admin duplicado",
       email: "duplicado@example.test",
       password: "Duplicado2026!",
@@ -59,7 +58,7 @@ async function secondInitStatus(page: Page): Promise<number> {
       redirect: "manual",
     });
     return response.status;
-  }, INIT_TOKEN);
+  });
 }
 
 async function totpFor(secret: string): Promise<string> {
@@ -107,7 +106,6 @@ test("crea el admin con /init, enrola 2FA y no permite un segundo alta", async (
   await page.goto(`${CONSOLE_URL}/init`);
   await expectNoSeriousA11yViolations(page, "console/init");
 
-  await page.locator("#initToken").fill(INIT_TOKEN);
   await page.locator("#name").fill("Admin E2E");
   await page.locator("#email").fill(adminEmail);
   await page.locator("#password").fill(adminPassword);

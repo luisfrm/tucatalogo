@@ -1,8 +1,9 @@
 /**
  * Autenticación del console (PLAN §4.5 C/F, §7.4, §7.5, §7.6).
  *
- * - `/init` es one-time: si ya hay un admin → **410** exista o no el token.
- *   `INIT_TOKEN` vive solo en el api y se compara en tiempo constante.
+ * - `/init` es one-time: si ya hay un admin → **410**. No hay credencial
+ *   compartida: la barrera externa es Cloudflare Access delante de `/init` y
+ *   el api solo aplica el one-time, el rate limit por IP y el hit de carrera.
  * - **M1:** ninguna respuesta emite cookie de sesión antes de verificar el
  *   segundo factor. `/init`, `/2fa/setup` y `login` devuelven un *challenge de
  *   enrolamiento* propio (token de un solo uso, 10 min, hasheado en
@@ -40,7 +41,7 @@ import { createTransientConsoleSession } from "../auth/transient-session";
 import { AUTH_MESSAGES, AUTH_REASONS, CONSOLE_ENROLLMENT } from "../constants/auth";
 import type { Env } from "../env";
 import { AppError } from "../errors";
-import { hashEmail, hashIp, randomToken, sha256Hex, timingSafeEqual } from "../libs/crypto";
+import { hashEmail, hashIp, randomToken, sha256Hex } from "../libs/crypto";
 import {
   consumeEnrollmentChallenge,
   countAdmins,
@@ -166,24 +167,9 @@ export async function initConsole(
     throw consumedError();
   }
 
-  const initToken = env.INIT_TOKEN;
-  if (!initToken) {
-    console.error(JSON.stringify({ level: "error", message: "Falta INIT_TOKEN" }));
-    throw new AppError("SERVICE_UNAVAILABLE", AUTH_MESSAGES.configMissing);
-  }
-
   const secret = requireConsoleSecret(env);
   const ipHash = await hashIp(secret, ip);
   await assertRateLimit(db, "consoleInitByIp", ipHash);
-
-  if (!timingSafeEqual(initToken, input.initToken)) {
-    throw new AppError(
-      "UNAUTHORIZED",
-      "El token de alta no es correcto.",
-      undefined,
-      AUTH_REASONS.initTokenInvalid,
-    );
-  }
 
   const now = new Date();
   const adminId = crypto.randomUUID();

@@ -38,7 +38,6 @@ export interface Env {
 
   BETTER_AUTH_SECRET_STORE?: string;
   BETTER_AUTH_SECRET_CONSOLE?: string;
-  INIT_TOKEN?: string;
 
   /** Solo tests: migraciones D1 inyectadas por `vitest.config.ts`. */
   TEST_MIGRATIONS?: { name: string; queries: string[] }[];

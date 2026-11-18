@@ -145,9 +145,14 @@ export const resetPasswordSchema = z.object({
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
-/** `POST /auth/console/init` (one-time, INIT_TOKEN solo en el api). */
+/**
+ * `POST /auth/console/init` (one-time).
+ *
+ * No lleva credencial compartida: la única barrera externa es Cloudflare
+ * Access delante de `/init`, y el api se limita a comprobar que aún no exista
+ * ningún admin (410 después), el rate limit por IP y el hit de carrera.
+ */
 export const consoleInitSchema = z.object({
-  initToken: z.string().trim().min(1, "Falta el token de alta"),
   name: z.string().trim().min(2).max(80),
   email: emailSchema,
   password: passwordSchema,

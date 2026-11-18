@@ -5,10 +5,6 @@ export const WEB_PORT = 5173;
 export const COMMERCIAL_URL = "http://localhost:5174";
 export const CONSOLE_URL = "http://localhost:5175";
 
-/** `INIT_TOKEN` local documentado en README (no es un secreto de prod). */
-export const INIT_TOKEN =
-  "22f305ec398dd3b1f6e629a4724e59276ee8c5fdf7aec58a6b28c18307d4e4a8";
-
 /** Tienda de referencia que el equipo usa a mano; los E2E no la borran. */
 export const QA_STORE = {
   slug: "qa-store",

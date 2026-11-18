@@ -8,8 +8,8 @@
  * Variables de auth (F2): `EMAIL_DRIVER`, `TURNSTILE_MODE`,
  * `STORE_ORIGIN_TEMPLATE`, `CONSOLE_ORIGIN` y `EMAIL_FROM` son configuración
  * no secreta y viven aquí por entorno. Los secretos (`BETTER_AUTH_SECRET_*`,
- * `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`) van por
- * `wrangler secret put` y, en local, por `.dev.vars`.
+ * `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`) van por `wrangler secret put` y, en
+ * local, por `.dev.vars`.
  */
 {
   "name": "tucatalogo-api",

@@ -1,8 +1,9 @@
 /**
  * Rutas del reino **console** (PLAN §8.2): `/auth/console/*`.
  *
- * `/init` es one-time y el `INIT_TOKEN` solo existe aquí. Toda sesión de
- * console exige 2FA completado; el reset de contraseña no lo salta.
+ * `/init` es one-time y no pide credencial compartida: lo protege Cloudflare
+ * Access delante del host del console. Toda sesión de console exige 2FA
+ * completado; el reset de contraseña no lo salta.
  *
  * Se encadena la definición para que `AppType` exponga el contrato a Hono RPC
  * (el comportamiento es idéntico al de las llamadas sueltas).

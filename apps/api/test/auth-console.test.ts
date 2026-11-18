@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { hashIp } from "../src/libs/crypto";
 import { findLastEmailTo } from "../src/libs/email";
 import { testEnv } from "./env";
 import {
@@ -18,7 +19,6 @@ import {
 } from "./helpers";
 
 const PASSWORD = "AdminContraseña1";
-const INIT_TOKEN = "test-init-token-0123456789abcdef";
 
 /** Estado limpio del reino console: `/init` es one-time por definición. */
 async function resetConsoleState(): Promise<void> {
@@ -43,7 +43,6 @@ interface InitResult {
 /** `/init` completo: alta del admin + enrolamiento pendiente, **sin sesión**. */
 async function initAdmin(email = uniqueEmail("admin")): Promise<InitResult> {
   const response = await postJson("/auth/console/init", {
-    initToken: INIT_TOKEN,
     name: "Admin",
     email,
     password: PASSWORD,
@@ -97,7 +96,6 @@ describe("POST /auth/console/init", () => {
     expect(await after.json()).toEqual({ available: false });
 
     const second = await postJson("/auth/console/init", {
-      initToken: INIT_TOKEN,
       name: "Otro",
       email: uniqueEmail("otro"),
       password: PASSWORD,
@@ -108,30 +106,66 @@ describe("POST /auth/console/init", () => {
     });
   });
 
-  it("responde 410 incluso con un token inválido cuando ya hay admin", async () => {
+  it("acepta el alta sin credencial compartida", async () => {
+    await resetConsoleState();
+    const email = uniqueEmail("admin");
+
+    // `/init` ya no recibe token: la barrera externa es Cloudflare Access.
+    const response = await postJson("/auth/console/init", {
+      name: "Admin",
+      email,
+      password: PASSWORD,
+    });
+    expect(response.status).toBe(201);
+    expect(hasLiveCookie(response, "console.session_token")).toBe(false);
+
+    const body = (await response.json()) as {
+      backupCodes: string[];
+      totpUri: string;
+      enrollmentRequired: boolean;
+      enrollmentToken: string;
+    };
+    expect(body.enrollmentRequired).toBe(true);
+    expect(body.backupCodes).toHaveLength(10);
+    expect(body.totpUri.startsWith("otpauth://totp/")).toBe(true);
+    expect(body.enrollmentToken).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("responde 410 cuando ya hay admin", async () => {
     await resetConsoleState();
     await initAdmin();
     const response = await postJson("/auth/console/init", {
-      initToken: "token-incorrecto",
       name: "Otro",
       email: uniqueEmail("otro"),
       password: PASSWORD,
     });
     expect(response.status).toBe(410);
+    expect((await response.json()) as ApiErrorBody).toMatchObject({
+      error: { code: "GONE", reason: "INIT_CONSUMED" },
+    });
   });
 
-  it("rechaza un INIT_TOKEN incorrecto y no crea admins", async () => {
+  it("limita el alta por IP (5/h) y no crea admins al agotarse", async () => {
     await resetConsoleState();
-    const response = await postJson("/auth/console/init", {
-      initToken: "token-incorrecto",
-      name: "Admin",
-      email: uniqueEmail("admin"),
-      password: PASSWORD,
-    });
-    expect(response.status).toBe(401);
-    expect((await response.json()) as ApiErrorBody).toMatchObject({
-      error: { code: "UNAUTHORIZED", reason: "INIT_TOKEN_INVALID" },
-    });
+    const ip = nextTestIp();
+    const bucket = `consoleInitByIp:${await hashIp(
+      testEnv.BETTER_AUTH_SECRET_CONSOLE!,
+      ip,
+    )}`;
+    const now = Date.now();
+    await testEnv.DB.prepare(
+      "INSERT INTO rate_limit_counter (bucket, count, window_started_at, expires_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+    )
+      .bind(bucket, 5, now, now + 60_000, now)
+      .run();
+
+    const blocked = await postJson(
+      "/auth/console/init",
+      { name: "Admin", email: uniqueEmail("admin"), password: PASSWORD },
+      { "x-client-ip": ip },
+    );
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("retry-after")).toBeTruthy();
 
     const total = await testEnv.DB.prepare("SELECT COUNT(*) AS total FROM admin_users").first<{
       total: number;

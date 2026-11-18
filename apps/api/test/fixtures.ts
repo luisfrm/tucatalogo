@@ -19,7 +19,6 @@ import {
 
 export const STORE_PASSWORD = "Contraseña123";
 export const ADMIN_PASSWORD = "AdminContraseña1";
-export const INIT_TOKEN = "test-init-token-0123456789abcdef";
 
 export interface StoreFixture {
   slug: string;
@@ -110,7 +109,6 @@ export async function resetAdminRealm(): Promise<void> {
 export async function createAdminSession(): Promise<AdminFixture> {
   const email = uniqueEmail("admin");
   const init = await postJson("/auth/console/init", {
-    initToken: INIT_TOKEN,
     name: "Admin",
     email,
     password: ADMIN_PASSWORD,

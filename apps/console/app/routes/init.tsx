@@ -75,16 +75,6 @@ export async function action({ request }: Route.ActionArgs) {
           { status: 410, headers: consoleResponseHeaders() },
         );
       }
-      if (error.status === 401) {
-        return data<InitActionData>(
-          {
-            ok: false,
-            errors: { initToken: "El token de alta no es correcto." },
-            message: "El token de alta no es correcto.",
-          },
-          { status: 400, headers: consoleResponseHeaders() },
-        );
-      }
       return data<InitActionData>(
         {
           ok: false,
@@ -203,7 +193,7 @@ export default function InitConsole() {
   return (
     <AuthShell
       title="Alta inicial del console"
-      description="Crea el único administrador del backoffice. El token de alta se reenvía al API y no se almacena."
+      description="Crea el único administrador del backoffice. Esta página solo existe hasta que haya un administrador."
       wide
       footer={
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -227,18 +217,6 @@ export default function InitConsole() {
             ) : null}
           </Alert>
         ) : null}
-
-        <TextField
-          id="initToken"
-          name="initToken"
-          label="Token de alta (INIT_TOKEN)"
-          type="password"
-          autoComplete="off"
-          spellCheck={false}
-          required
-          hint="Lo entrega el operador del despliegue. No se guarda en el navegador."
-          error={fieldError("initToken")}
-        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField

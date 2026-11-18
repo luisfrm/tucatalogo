@@ -157,7 +157,6 @@ console.use("*", requireAdminSession); // deja c.get("adminId") / adminUser (2FA
 | Variable | Dónde | Notas |
 | --- | --- | --- |
 | `BETTER_AUTH_SECRET_STORE` / `_CONSOLE` | secreto | 32+ bytes; falta → 503 |
-| `INIT_TOKEN` | secreto | solo `/auth/console/init`, comparación en tiempo constante |
 | `RESEND_API_KEY` | secreto | obligatorio con `EMAIL_DRIVER=resend` |
 | `TURNSTILE_SECRET_KEY` | secreto | obligatorio con `TURNSTILE_MODE=enabled` |
 | `EMAIL_DRIVER` | var | `memory` (local + outbox) \| `console` (solo local) \| `resend` |

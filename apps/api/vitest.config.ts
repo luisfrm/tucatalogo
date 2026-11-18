@@ -31,7 +31,6 @@ export default defineConfig(async () => {
             CONSOLE_ORIGIN: "http://localhost:5175",
             BETTER_AUTH_SECRET_STORE: "test-secret-store-0123456789abcdef0123456789",
             BETTER_AUTH_SECRET_CONSOLE: "test-secret-console-0123456789abcdef0123456789",
-            INIT_TOKEN: "test-init-token-0123456789abcdef",
           },
         },
       }),

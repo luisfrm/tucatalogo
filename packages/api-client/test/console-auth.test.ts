@@ -73,7 +73,6 @@ describe("console auth (M1)", () => {
     const { api, calls } = stubApi([{ status: 201, body: response }]);
 
     const input: ConsoleInitInput = {
-      initToken: "init-token",
       name: "Admin",
       email: "admin@example.com",
       password: "Contraseña123",

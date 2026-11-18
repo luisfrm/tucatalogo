@@ -26,9 +26,6 @@ CONSOLE_ORIGIN=http://localhost:5175
 # Generar con: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 BETTER_AUTH_SECRET_STORE=
 BETTER_AUTH_SECRET_CONSOLE=
-# 32 bytes (64 hex). Generar con:
-# node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-INIT_TOKEN=
 
 # Solo si EMAIL_DRIVER=resend (sin clave → 503, no hay fallback).
 # RESEND_API_KEY=

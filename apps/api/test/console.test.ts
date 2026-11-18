@@ -264,7 +264,6 @@ describe("aislamiento de reinos", () => {
 
   it("exige 2FA: una sesión de console sin verificar no abre el backoffice", async () => {
     const init = await postJson("/auth/console/init", {
-      initToken: "test-init-token-0123456789abcdef",
       name: "Admin",
       email: "pendiente@example.com",
       password: "AdminContraseña1",

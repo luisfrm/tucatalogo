@@ -23,7 +23,7 @@ describe("api", () => {
 
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.name).toBe("tucatalogo-api");
-    expect(JSON.stringify(body)).not.toContain("INIT_TOKEN");
+    expect(JSON.stringify(body)).not.toContain("BETTER_AUTH_SECRET_CONSOLE");
   });
 
   it("una ruta inexistente devuelve el envelope NOT_FOUND", async () => {

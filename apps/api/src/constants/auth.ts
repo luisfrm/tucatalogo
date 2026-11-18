@@ -129,7 +129,6 @@ export const AUTH_REASONS = {
   slugFormat: "SLUG_FORMAT",
   turnstileFailed: "TURNSTILE_FAILED",
   initConsumed: "INIT_CONSUMED",
-  initTokenInvalid: "INIT_TOKEN_INVALID",
   themeUnavailable: "THEME_UNAVAILABLE",
   configMissing: "CONFIG_MISSING",
   /** M1: el challenge de enrolamiento no vale (caducado, usado o inventado). */
