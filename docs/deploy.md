@@ -19,7 +19,7 @@ a mano con el workflow `sync-secrets`.
 
 > **`prod` × 2.** `--env prod` es el entorno de **Wrangler** (`env.prod` del
 > `wrangler.jsonc`); `environment: prod` es el **GitHub Environment** del que se
-> leen los 5 runtime secrets, `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST`.
+> leen los 4 runtime secrets, `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST`.
 
 ## Prerrequisitos Cloudflare
 
@@ -31,8 +31,8 @@ a mano con el workflow `sync-secrets`.
 | 4 | Token de API | Permisos de Workers Scripts y Routes (edit), D1 (edit), R2 (edit) y Zone (read); se guarda como repository secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` |
 | 5 | Resend | Dominio de envío verificado (SPF/DKIM) y API key |
 | 6 | Turnstile | Site key y secret key para los hosts del registro |
-| 7 | GitHub: Environment `prod` + 2 repo secrets | **Repository secrets**: `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` (los usan todos los jobs con Environment). **Environment secrets** (`prod`): los 5 runtime secrets del api (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`). **Environment variables** (`prod`): `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST` (esta última cae en `demo.tucatalogo.live` si falta). El Environment `prod` no tiene reglas de protección ni revisores |
-| 8 | `INIT_TOKEN` | Aleatorio (32 bytes = 64 hex en local, dev y prod; valores distintos), guardado como Environment secret de `prod` y aplicado al worker con `sync-secrets` |
+| 7 | GitHub: Environment `prod` + 2 repo secrets | **Repository secrets**: `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` (los usan todos los jobs con Environment). **Environment secrets** (`prod`): los 4 runtime secrets del api (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`). **Environment variables** (`prod`): `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST` (esta última cae en `demo.tucatalogo.live` si falta). El Environment `prod` no tiene reglas de protección ni revisores |
+| 8 | **Cloudflare Access** del alta | Aplicación self-hosted en `console.tucatalogo.live` con path `init` y política que solo admite al owner. **Requisito previo** al deploy de la versión sin token: sin ella, `/init` queda abierto. Ver *Cloudflare Access del alta* |
 | 9 | Buzón de pruebas | Para E2E de OTP y reset |
 
 ## Recursos por entorno
@@ -121,7 +121,7 @@ la tienda.
 
 ## Secretos
 
-Solo el worker `api` tiene secretos (5). **`wrangler deploy` no los aplica**: el
+Solo el worker `api` tiene secretos (4). **`wrangler deploy` no los aplica**: el
 deploy publica código, variables y bindings, y deja intactos los secretos ya
 cargados en el worker. Por eso los secretos no forman parte de `deploy-prod.yml`.
 
@@ -142,12 +142,22 @@ pnpm exec wrangler secret put BETTER_AUTH_SECRET_STORE --env prod
 pnpm exec wrangler secret put BETTER_AUTH_SECRET_CONSOLE --env prod
 pnpm exec wrangler secret put RESEND_API_KEY --env prod
 pnpm exec wrangler secret put TURNSTILE_SECRET_KEY --env prod
-pnpm exec wrangler secret put INIT_TOKEN --env prod
 ```
 
 En el primer despliegue hay que desplegar el `api` **antes** de sincronizar los
 secretos: `wrangler secret put` necesita que el worker exista. Después, para
 rotar un secreto basta con repetir el workflow; el siguiente deploy no lo borra.
+
+`INIT_TOKEN` ya no es un secreto del worker (ADR 0002). Si quedó de la versión
+anterior, bórralo una vez; no se vuelve a crear:
+
+```bash
+cd apps/api
+pnpm exec wrangler secret delete INIT_TOKEN --env prod
+```
+
+y elimina el *Environment secret* homónimo en GitHub. Es limpieza, no un paso de
+deploy: ningún código lo lee y `sync-secrets` ya no lo enumera.
 
 Si haces un deploy manual de dev, repite con `--env dev` y valores **distintos**
 (no hay workflow para dev). `EMAIL_DRIVER`, `TURNSTILE_MODE`, `MEDIA_BASE_URL`,
@@ -163,7 +173,7 @@ Si haces un deploy manual de dev, repite con `--env dev` y valores **distintos**
 - **Repository secrets** (`Settings → Secrets and variables → Actions → Secrets`):
   las 2 credenciales de Cloudflare. Disponibles para cualquier job, con
   Environment o sin él.
-- **GitHub Environment `prod`** (`Settings → Environments → prod`): los 5 runtime
+- **GitHub Environment `prod`** (`Settings → Environments → prod`): los 4 runtime
   secrets del api y las variables del destino prod. **Sin reglas de protección ni
   revisores**: `deploy-prod.yml` sigue siendo automático en cada push.
 
@@ -173,7 +183,6 @@ Si haces un deploy manual de dev, repite con `--env dev` y valores **distintos**
 | `CLOUDFLARE_ACCOUNT_ID` | Repository secret | *Actions → Secrets* | idem |
 | `BETTER_AUTH_SECRET_STORE` | Environment secret (`prod`) | *Environments → prod → Environment secrets* | Runtime secret del api; lo aplica `sync-secrets` |
 | `BETTER_AUTH_SECRET_CONSOLE` | Environment secret (`prod`) | idem | idem (valor distinto de `_STORE`) |
-| `INIT_TOKEN` | Environment secret (`prod`) | idem | idem; 32 bytes / 64 hex |
 | `RESEND_API_KEY` | Environment secret (`prod`) | idem | idem |
 | `TURNSTILE_SECRET_KEY` | Environment secret (`prod`) | idem | idem |
 | `TURNSTILE_SITE_KEY` | Environment variable (`prod`) | *Environments → prod → Environment variables* | `0x4AAAAAAGF7HGDrrRDDGsww`. Valor canónico en `env.prod` de `apps/commercial/wrangler.jsonc`; la variable de GitHub es una copia informativa y no se inyecta en el build |
@@ -191,15 +200,55 @@ la variable en `prod` (o a nivel de repo): el fallback apunta a un host que solo
 válido mientras exista esa tienda.
 
 > **Al primer push con este modelo:** el deploy se dispara solo. Los 2 secrets de
-> Cloudflare, los 5 Environment secrets y las variables ya están creados, así que
+> Cloudflare, los 4 Environment secrets y las variables ya están creados, así que
 > el deploy corre; `sync-secrets` sigue siendo manual y **debe lanzarse después**
 > del primer deploy exitoso del `api` (el worker tiene que existir para recibir
 > `wrangler secret put`).
+
+## Cloudflare Access del alta (`/init`)
+
+El alta del primer admin ya no usa token: la única barrera es una aplicación de
+**Cloudflare Access** (Zero Trust) sobre el path `init` de
+`console.tucatalogo.live` (ADR 0002). Es un requisito **previo** al deploy de esta
+versión: sin Access, `/init` queda expuesto hasta que exista un admin.
+
+Configuración (dashboard, una vez por entorno con host propio):
+
+1. *Zero Trust → Access → Applications → Add an application → Self-hosted*.
+2. **Application domain:** `console.tucatalogo.live`, **path** `init`. No cubre el
+   resto del console.
+3. **Policy:** `Allow` con *Include → Emails* = el email del owner. Sin reglas
+   `Bypass`.
+4. **Login method:** el de la organización (One-time PIN por email o un IdP
+   configurado). Los accesos quedan registrados en los logs de Access.
+5. Sesión corta (por ejemplo 15 min): solo hace falta para completar el alta.
+
+Comprobación obligatoria antes de desplegar:
+
+```bash
+curl -sI https://console.tucatalogo.live/init
+```
+
+- **302** con `location:` hacia `<team>.cloudflareaccess.com/cdn-cgi/access/login/...`
+  → Access está delante. Correcto.
+- **200** → Access no está aplicada (falta la aplicación, el path no coincide o la
+  política es `Bypass`). **No despliegues** hasta corregirlo.
+- **404/500** → primero corrige host o ruta del console; después valida Access.
+- **Cualquier otro código** no confirma la protección: diagnostica la aplicación
+  antes de desplegar.
+
+`https://console.tucatalogo.live/health` y `/login` deben seguir respondiendo sin
+Access (200): si también piden Access, el path de la aplicación está mal.
+
+Tras el primer admin, `/init` responde 410 y el vector queda cerrado: la aplicación
+de Access puede mantenerse (defensa en profundidad) o retirarse sin reabrir el alta.
 
 ## Orden de deploy
 
 El API va primero: los frontends consumen su contrato.
 
+0. **Cloudflare Access del alta** activa y verificada (302 en `/init`). Es
+   requisito previo: el deploy no la configura y sin ella `/init` queda abierto.
 1. **Migraciones** (prod).
 2. **`api`**.
 3. **`web`, `commercial` y `console`** (pueden ir en paralelo).
@@ -270,7 +319,7 @@ workflow solo construye y despliega `env.prod`.
 | --- | --- | --- | --- |
 | [`ci.yml`](../.github/workflows/ci.yml) | push a `main` y PR | — | No |
 | [`deploy-prod.yml`](../.github/workflows/deploy-prod.yml) | push a `master`/`main` o `workflow_dispatch` | `prod` (+ 2 repository secrets de Cloudflare) | `env.prod` |
-| [`sync-secrets.yml`](../.github/workflows/sync-secrets.yml) | **solo `workflow_dispatch`** (`target: prod`, `confirm: sync`) | `prod` | No despliega: `wrangler secret put --env prod` de los 5 secretos del api |
+| [`sync-secrets.yml`](../.github/workflows/sync-secrets.yml) | **solo `workflow_dispatch`** (`target: prod`, `confirm: sync`) | `prod` | No despliega: `wrangler secret put --env prod` de los 4 secretos del api |
 
 - Prod-only: no existe `deploy-dev.yml` y ningún workflow despliega `env.dev`. El
   Environment `dev` existe en GitHub pero **no se usa**.
@@ -385,6 +434,12 @@ problema es de contrato; al revés si el contrato nuevo rompe a los clientes
 antiguos. Cada release debe convivir con la versión anterior al otro lado del
 binding durante la ventana de deploy.
 
+**Ojo con el alta:** un rollback a una versión anterior de `console`/`api` que
+todavía pide `INIT_TOKEN` exige **recrear** el secreto (`wrangler secret put
+INIT_TOKEN --env prod` y el Environment secret en GitHub); si se borró, el rollback
+de código no restaura ese flujo. Si el alta ya se consumió, el 410 aplica igual en
+ambas versiones y el rollback es inocuo para `/init`.
+
 **Datos (D1 Time Travel):**
 
 ```bash
@@ -437,8 +492,11 @@ No se toca nada más de esa zona (apex, `www`, ni registros de otros proyectos).
 
 - **Hecho en Cloudflare:** zona `tucatalogo.live`, D1 `tucatalogo-prod`
   (`ed32bca0-2ed9-4a07-97e5-018e8a15049f`, ENAM), R2 `tucatalogo-media-prod`,
-  worker `api` desplegado con sus 5 secrets y worker `web` desplegado **sin ruta**.
+  worker `api` desplegado con sus secretos y worker `web` desplegado **sin ruta**.
 - **Pendiente en Cloudflare:**
+  - **Cloudflare Access del alta**: aplicación self-hosted `console.tucatalogo.live`
+    con path `init` y política del owner (ver *Cloudflare Access del alta*). Debe
+    existir **antes** del primer deploy del console sin token.
   - Añadir la zona **`tucatalogo.live`** al `CLOUDFLARE_API_TOKEN` con
     `Workers Routes → Edit` + `Zone → Read` (y mantener D1/Workers/R2): sin eso no
     se aplican las rutas de `web`, `commercial` ni `console`.
@@ -450,11 +508,12 @@ No se toca nada más de esa zona (apex, `www`, ni registros de otros proyectos).
   - **Gate F0 (wildcard vs bucket): abierto** — con todo en una zona,
     `*.tucatalogo.live` puede casar con `bucket.tucatalogo.live`. Revalidar con
     `curl`; si intercepta, ruta de negación sin script.
-- **En GitHub:** Environment `prod` con los 5 Environment secrets
-  (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`,
-  `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`), las variables `TURNSTILE_SITE_KEY` y
+- **En GitHub:** Environment `prod` con los 4 Environment secrets
+  (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `RESEND_API_KEY`,
+  `TURNSTILE_SECRET_KEY`), las variables `TURNSTILE_SITE_KEY` y
   `SMOKE_STORE_HOST` (`demo.tucatalogo.live`) y los 2 Repository secrets
-  de Cloudflare.
+  de Cloudflare. El antiguo `INIT_TOKEN` se elimina del Environment y del worker
+  (ADR 0002).
 - **Secretos del worker api en prod:** ✅ aplicados con `sync-secrets`
   (`wrangler secret put --env prod`). En rotaciones se relanza el workflow.
 - **`env.dev`:** sigue en placeholders (`REPLACE_ME_DEV_*`) y no se usa. Si alguna

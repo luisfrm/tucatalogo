@@ -13,9 +13,9 @@ tienda**: se publica en `slug.tucatalogo.live`, el dueño la administra en
 y temas), F5 (`/panel-admin`) y F6 (console) están implementados. `docs/` y los
 tres workflows (`ci.yml`, `deploy-prod.yml`, `sync-secrets.yml`) existen. En
 Cloudflare ya están provisionados la zona, D1 `tucatalogo-prod` y R2
-`tucatalogo-media-prod`, y en GitHub el Environment `prod` con los 5 runtime secrets;
-queda el primer deploy y el custom domain del bucket (ver
-[`docs/deploy.md`](./docs/deploy.md)).
+`tucatalogo-media-prod`, y en GitHub el Environment `prod` con los runtime secrets;
+queda el primer deploy, el custom domain del bucket y la aplicación de Cloudflare
+Access del alta (ver [`docs/deploy.md`](./docs/deploy.md)).
 
 ## Stack
 
@@ -116,16 +116,12 @@ El contrato detallado del API está en
    ```bash
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"  # BETTER_AUTH_SECRET_STORE
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"  # BETTER_AUTH_SECRET_CONSOLE
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"  # INIT_TOKEN (local: 32 bytes / 64 hex)
    ```
 
-   El valor local de `INIT_TOKEN` que usa el repo es
-   `22f305ec398dd3b1f6e629a4724e59276ee8c5fdf7aec58a6b28c18307d4e4a8`
-   (32 bytes / 64 hex). No es un secreto de prod: dev y prod llevan valores
-   propios y distintos. Los demás valores locales no sensibles (puertos,
-   `MEDIA_BASE_URL`, claves de prueba de Turnstile) ya vienen en el ejemplo y en
-   el `vars` de cada `wrangler.jsonc`; el detalle está en
-   [`docs/env.md`](./docs/env.md).
+   Los demás valores locales no sensibles (puertos, `MEDIA_BASE_URL`, claves de
+   prueba de Turnstile) ya vienen en el ejemplo y en el `vars` de cada
+   `wrangler.jsonc`; el detalle está en [`docs/env.md`](./docs/env.md). El alta del
+   console **no** necesita secreto ni token.
 
 4. Aplica las migraciones a la D1 local:
 
@@ -215,15 +211,23 @@ El login de tienda existe en el API (`POST /auth/store/login` con la cabecera
 ### Crear el primer administrador del console
 
 1. Arranca el console (`pnpm dev:console`) y abre `http://localhost:5175/init`.
-2. Pega el `INIT_TOKEN` de `apps/api/.dev.vars` y elige email y contraseña. El
-   console reenvía el token al API por service binding y no lo almacena.
+   En local no hay Cloudflare Access: la página está abierta en tu máquina y la
+   única condición es que la D1 local no tenga admin.
+2. Elige nombre, email y contraseña. **No hay campo de token**: el alta no usa
+   secreto (en prod la protege Cloudflare Access; ver
+   [`docs/deploy.md`](./docs/deploy.md)).
 3. Guarda la **URI TOTP** y los **códigos de respaldo**: se muestran una sola
    vez. El console **no abre sesión** en este paso: continúa a `/2fa`, enrola la
    app autenticadora y verifica un código. La cookie `console.session_token` solo
    se emite al verificar (`/auth/console/2fa/verify`), y hasta entonces
    `admin_two_factor.verified` es 0 y `/console/*` responde 403.
-4. A partir de ahí `/init` responde **410 Gone** exista o no un token válido. El
-   `enrollmentToken` del alta es de un solo uso y caduca a los 10 minutos.
+4. A partir de ahí `/init` responde **410 Gone**. El `enrollmentToken` del alta es
+   de un solo uso y caduca a los 10 minutos.
+
+Si la D1 local ya tenía un admin y no guardaste las credenciales,
+`node e2e/scripts/reset-admin.mjs` (con los servidores parados) vacía las tablas
+`admin_*`. En prod no hay UI de gestión de admins: ver
+[`docs/runbook.md`](./docs/runbook.md) §1.4.
 
 La recuperación de contraseña del console usa `/recuperar`; el enlace del correo
 apunta a `/reset-password?token=…`, que redirige a `/restablecer?token=…`.
@@ -324,13 +328,17 @@ Convenciones:
 | [`docs/deploy.md`](./docs/deploy.md) | Cloudflare, D1/R2, orden de deploy, CI, rollback |
 | [`docs/runbook.md`](./docs/runbook.md) | Operaciones e incidentes |
 | [`docs/adr/0001-f0-stack-decisions.md`](./docs/adr/0001-f0-stack-decisions.md) | Decisiones de stack del spike F0 |
+| [`docs/adr/0002-init-without-token.md`](./docs/adr/0002-init-without-token.md) | Alta del console sin token, protegida por Cloudflare Access |
 
 ## Pendiente cloud
 
 Recursos de prod ya provisionados (D1 `tucatalogo-prod`, R2
 `tucatalogo-media-prod` con custom domain activo, worker `api` desplegado con sus
-5 secrets, GitHub Environment `prod`). Lo que falta:
+secretos, GitHub Environment `prod`). Lo que falta:
 
+- **Cloudflare Access del alta**: aplicación self-hosted `console.tucatalogo.live`
+  con path `init` y política del owner. Requisito previo al deploy del console sin
+  token: sin ella, `/init` queda abierto (ver [`docs/deploy.md`](./docs/deploy.md)).
 - **DNS de `tucatalogo.live`**: faltan los registros proxied (apex, `*`, `console`,
   `www`) y el custom domain del bucket. Sin ellos todo resuelve NXDOMAIN.
 - **Permiso del token**: la zona `tucatalogo.live` debe estar en `CLOUDFLARE_API_TOKEN`
@@ -344,13 +352,13 @@ Recursos de prod ya provisionados (D1 `tucatalogo-prod`, R2
 - Deploy **prod-only**: `deploy-prod.yml` despliega en cada push a `master`/`main`
   con el GitHub **Environment `prod`** (sin reglas de protección ni aprobaciones).
   Credenciales: 2 **repository secrets** (`CLOUDFLARE_API_TOKEN`,
-  `CLOUDFLARE_ACCOUNT_ID`); los 5 runtime secrets y las variables
+  `CLOUDFLARE_ACCOUNT_ID`); los 4 runtime secrets y las variables
   (`TURNSTILE_SITE_KEY`, `SMOKE_STORE_HOST`) viven en el Environment `prod`.
   `SMOKE_STORE_HOST` cae en `demo.tucatalogo.live` mientras no exista la variable:
   el owner debe crearla cuando tenga una tienda real de bajo riesgo.
-- Secretos de runtime del api: los 5 (`BETTER_AUTH_SECRET_STORE`,
-  `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`,
-  `TURNSTILE_SECRET_KEY`) son **Environment secrets de `prod`** y se aplican con el
+- Secretos de runtime del api: los 4 (`BETTER_AUTH_SECRET_STORE`,
+  `BETTER_AUTH_SECRET_CONSOLE`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`) son
+  **Environment secrets de `prod`** y se aplican con el
   workflow **manual** `sync-secrets` (`target: prod`, `confirm: sync`), que ejecuta
   `wrangler secret put --env prod`. `wrangler deploy` no aplica secretos. Ojo:
   `--env prod` es de Wrangler, el `environment: prod` es de GitHub. La

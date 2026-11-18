@@ -11,7 +11,7 @@ name: Deploy prod
 #     accesibles desde cualquier job con Environment y siguen siendo la única
 #     credencial de Cloudflare del repo.
 # Este workflow es **solo deploy**: `wrangler deploy` no aplica secretos, así que
-# los 5 runtime secrets del api se sincronizan a mano con `sync-secrets.yml`.
+# los 4 runtime secrets del api se sincronizan a mano con `sync-secrets.yml`.
 # Un commit cuyo mensaje lleve `[skip ci]` no dispara este workflow.
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
     name: Deploy prod
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Environment `prod`: agrupa los 5 runtime secrets del api, `TURNSTILE_SITE_KEY`
+    # Environment `prod`: agrupa los 4 runtime secrets del api, `TURNSTILE_SITE_KEY`
     # y `SMOKE_STORE_HOST`. No tiene reglas de protección ni revisores: el deploy
     # sigue siendo automático en cada push a la línea principal.
     environment:

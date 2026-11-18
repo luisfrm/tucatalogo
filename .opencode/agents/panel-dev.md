@@ -26,7 +26,7 @@ Eres desarrollador frontend senior de React Router v8 (framework mode) sobre Wor
 - Suspensión: el owner solo reactiva si `suspendedBy = owner`; si suspendió el console, se muestra el motivo y no se ofrece reactivar. `/panel-admin` sigue accesible con la tienda suspendida.
 
 ## `apps/console` (UI)
-- `/init` (token + TOTP + backup codes), login, `/2fa`, recuperar y restablecer.
+- `/init` (sin campo de token; en prod detrás de Cloudflare Access + TOTP + backup codes), login, `/2fa`, recuperar y restablecer.
 - Listado con búsqueda y filtro por estado; detalle (owner email, slug, status, fechas, nº productos y slides).
 - Suspender con motivo, reactivar, eliminar con confirmación por slug y vista de audit log.
 - Tema neutral de densidad alta. Nada de impersonar ni de editar datos de la tienda.

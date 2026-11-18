@@ -21,38 +21,106 @@ Convenciones:
 | Logs en vivo | `cd apps/api && pnpm exec wrangler tail tucatalogo-api-prod --env prod` |
 | Outbox local | `curl "http://127.0.0.1:9797/dev/outbox?to=<email>"` |
 | Health de frontends | `curl -s https://tucatalogo.live/health` |
+| Access del alta | `curl -sI https://console.tucatalogo.live/init` (302 a `cloudflareaccess.com`; 200 = sin Access) |
 
-## 1. Rotar `INIT_TOKEN`
+## 1. Alta del primer administrador (Cloudflare Access)
 
-El token vive **solo** en el worker `api`; el console lo recibe del formulario
-`/init` y no lo guarda.
+El alta ya no usa token: `/init` está detrás de una aplicación de **Cloudflare
+Access** (ADR 0002). Dentro de la aplicación sigue siendo one-time (410 tras el
+primer admin), con rate limit (5/hora por IP) y `audit_log` (`admin.init`). Access
+es requisito **previo** a cualquier deploy del console sin token.
+
+### 1.1 Activar Access
+
+Dashboard: *Zero Trust → Access → Applications → Add an application →
+Self-hosted*.
+
+- **Application domain:** `console.tucatalogo.live` · **path:** `init`.
+- **Policy:** `Allow` → *Include → Emails*: email del owner. Sin reglas `Bypass`.
+- **Login method:** One-time PIN por email o el IdP de la organización. Una sesión
+  corta (15 min) basta para completar el alta.
+
+Solo el path `init` queda cubierto: `/login`, `/2fa`, `/health` y el resto del
+console siguen respondiendo sin Access.
+
+### 1.2 Comprobar que Access está delante
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+curl -sI https://console.tucatalogo.live/init
 ```
 
-Local usa también **32 bytes = 64 hex**. Valor de trabajo local:
-`22f305ec398dd3b1f6e629a4724e59276ee8c5fdf7aec58a6b28c18307d4e4a8`.
-dev y prod llevan un valor propio, distinto del local y entre sí; el valor local
-**no** se usa como secreto de prod.
+- `302` con `location: https://<team>.cloudflareaccess.com/cdn-cgi/access/login/...`
+  → correcto.
+- `200` → **Access no está protegiendo el alta**. Causas típicas: la aplicación no
+  existe, el path no es `init`, o la política es `Bypass`/*Allow everyone*.
+  Corrígelo antes de desplegar: mientras responda 200, cualquiera que llegue puede
+  crear el admin.
+- `404`/`500` → problema de host o ruta del console; resuélvelo primero.
+- Cualquier otro código no confirma la protección: diagnostica la aplicación antes
+  de desplegar.
 
-1. Actualiza `apps/api/.dev.vars` (`INIT_TOKEN=...`) y reinicia `pnpm dev:api` si
-   no recarga solo.
-2. Actualiza el secreto remoto por entorno. **En prod** el valor es un **Environment
-   secret del GitHub Environment `prod`**: actualízalo en *Settings → Environments →
-   prod → Environment secrets* y lanza el workflow manual **Sync worker secrets**
-   (`target: prod`, `confirm: sync`). Si tocas solo el worker con `secret put`, el
-   siguiente `sync-secrets` volvería al valor del Environment.
+Repite la comprobación tras cualquier cambio en la aplicación (path, política,
+dominio) y antes de un deploy que toque `/init`.
 
-   ```bash
-   cd apps/api
-   pnpm exec wrangler secret put INIT_TOKEN --env dev
-   ```
+### 1.3 Crear el admin
 
-3. Comprueba que `/init` sigue disponible (no responde 410) en el entorno donde
-   aún no hay admin. Una vez consumido, `/init` responde 410 con cualquier token:
-   rotar el token no reabre el alta.
-4. Registra el cambio en el canal del equipo. No se versiona el valor.
+1. Abre `https://console.tucatalogo.live/init`: Access pide la identidad del owner.
+2. Rellena nombre, email y contraseña del único admin. **No hay campo de token.**
+3. Guarda la **URI TOTP** y los **códigos de respaldo** (se muestran una sola vez).
+4. Continúa a `/2fa`, enrola la app y verifica. La cookie `console.session_token`
+   solo se emite en `/auth/console/2fa/verify`.
+5. Recarga `/init`: debe responder **410**. El vector queda cerrado para siempre.
+
+En local (`pnpm dev:console`, `http://localhost:5175/init`) no hay Access: la página
+está abierta en tu máquina y la única condición es que la D1 local no tenga admin.
+El API escribe `audit_log` con `admin.init`.
+
+### 1.4 Si el alta ya se consumió
+
+No hay UI de gestión de admins. `/init` responde 410 en cuanto existe una fila en
+`admin_users`, aunque Access esté bien configurado. Antes de tocar datos, agota las
+vías normales:
+
+- Prueba `/login` con las credenciales conocidas y el 2FA.
+- Si el buzón del admin funciona, usa el reset de contraseña (§3).
+
+Solo si no hay credenciales ni 2FA utilizables, vacía el reino admin. Guarda antes
+el bookmark de Time Travel (§10) y deja constancia en el canal del equipo.
+
+```bash
+cd apps/api
+pnpm exec wrangler d1 execute tucatalogo-prod --remote --env prod --yes \
+  --command "SELECT id, email FROM admin_users;"
+pnpm exec wrangler d1 execute tucatalogo-prod --remote --env prod --yes \
+  --command "DELETE FROM admin_two_factor; DELETE FROM admin_sessions; DELETE FROM admin_accounts; DELETE FROM admin_verifications; DELETE FROM admin_users;"
+```
+
+El orden es el mismo que usa `e2e/scripts/reset-admin.mjs` (hijos antes que
+`admin_users`), así que no depende de que el pragma de foreign keys esté activo.
+`admin_verifications` no depende de `admin_users` y guarda también verificaciones
+del reset del console: se vacía para no dejar tokens pendientes.
+
+1. Abre `/init` (debe mostrarse el formulario, no 410) y repite §1.3.
+2. Hazlo **con Access activo**: durante esa ventana la aplicación es la única
+   barrera del alta.
+3. Registra quién era el admin anterior, por qué se perdió el acceso y cuándo se
+   recreó.
+
+En local, con los servidores parados: `node e2e/scripts/reset-admin.mjs`.
+
+### 1.5 Limpiar el `INIT_TOKEN` huérfano
+
+Es limpieza, no un paso de deploy: ningún código lo lee. Si el worker conserva el
+secreto de la versión anterior:
+
+```bash
+cd apps/api
+pnpm exec wrangler secret delete INIT_TOKEN --env prod
+```
+
+y elimina el *Environment secret* homónimo en *Settings → Environments → prod →
+Environment secrets*. No se vuelve a generar: `sync-secrets` ya sincroniza solo los
+4 secretos restantes.
 
 ## 2. Rotar el resto de secretos
 
@@ -101,18 +169,7 @@ Prueba con un reset del console (`/recuperar`).
    `TURNSTILE_FAILED`; un fallo de red de `siteverify` devuelve 503 y el registro
    **no** continúa.
 
-## 3. Crear el primer administrador
-
-1. `pnpm dev:console` (o el host de dev/prod) y abre `/init`.
-2. Pega el `INIT_TOKEN`, email y contraseña.
-3. Guarda la URI TOTP y los códigos de respaldo (se muestran una sola vez).
-4. Continúa a `/2fa`, enrola la app y verifica.
-5. Comprueba el 410: recarga `/init`; debe estar cerrado.
-
-El API escribe `audit_log` con `admin.init`. No hay UI para crear más admins
-(fuera del MVP).
-
-## 4. Reset de la contraseña del admin
+## 3. Reset de la contraseña del admin
 
 Camino soportado:
 
@@ -141,7 +198,7 @@ Si el buzón no está disponible:
   bloqueando el flujo. Esto no cambia la contraseña: solo obliga a enrolar 2FA de
   nuevo.
 
-## 5. Suspender y reactivar una tienda
+## 4. Suspender y reactivar una tienda
 
 Mecanismo normal: **console → `/tiendas/:id`**.
 
@@ -165,7 +222,7 @@ pnpm exec wrangler d1 execute tucatalogo-local --local \
 
 Emergencia (sin UI y sin audit): actualiza D1 directamente **solo** si el console
 no está disponible, y deja constancia manual en el canal del equipo. Antes, anota
-el bookmark de Time Travel (§11). Respeta la invariante `status = 'suspended'` ⇔
+el bookmark de Time Travel (§10). Respeta la invariante `status = 'suspended'` ⇔
 `suspended_by IS NOT NULL`:
 
 ```bash
@@ -176,7 +233,7 @@ pnpm exec wrangler d1 execute tucatalogo-prod --remote --env prod \
 
 Para reactivar a mano, limpia los tres campos y deja `status = 'active'`.
 
-## 6. Eliminar una tienda
+## 5. Eliminar una tienda
 
 **No hay borrado manual soportado.** El borrado es un hard delete con orden
 obligatorio: R2 primero (`stores/<storeId>/`), después D1 en un batch (hijos →
@@ -209,7 +266,7 @@ Reconciliación (PLAN §17, riesgo 13): compara los prefijos `stores/` del bucke
 los `store.id` de D1. El listado de objetos se hace desde el dashboard de R2
 (Objects) o con la API S3; este `wrangler` (4.163.0) no tiene `r2 object list`.
 
-## 7. Depurar un 404 de tienda
+## 6. Depurar un 404 de tienda
 
 El 404 del storefront es **idéntico** para tienda inexistente, suspendida,
 eliminada o slug inválido: la respuesta no revela el motivo. Diagnóstico:
@@ -244,7 +301,7 @@ eliminada o slug inválido: la respuesta no revela el motivo. Diagnóstico:
    activa. No hay host público: se comprueba desde los tests o con
    `wrangler dev`.
 
-## 8. Verificar media y R2
+## 7. Verificar media y R2
 
 1. Local: sube una imagen desde `/panel-admin/productos` o con los tests, y pide
    la key:
@@ -275,7 +332,7 @@ eliminada o slug inválido: la respuesta no revela el motivo. Diagnóstico:
    `-thumb.webp`; hero `-desktop.webp` / `-mobile.webp`; logo
    `stores/<storeId>/logo/<uuid>.webp`. Son inmutables.
 
-## 9. Rate limits
+## 8. Rate limits
 
 Se aplican en el route, antes del service. La única capa implementada hoy es D1
 (`rate_limit_counter`, ventana fija con UPSERT atómico); exceso → 429 con
@@ -305,7 +362,7 @@ Los buckets son `<operación>:<sujeto hasheado>`; no contienen email ni IP en
 claro. En prod, borra solo el bucket afectado y documenta el motivo: saltarse el
 límite abre la puerta a abuso.
 
-## 10. Outbox local
+## 9. Outbox local
 
 ```bash
 curl "http://127.0.0.1:9797/dev/outbox?to=duena@example.com"
@@ -319,7 +376,7 @@ curl "http://127.0.0.1:9797/dev/outbox/last"
 - Devuelve `code` (OTP) o `resetUrl` (reset). `Cache-Control: no-store`.
 - Sin `to` responde 400. No hay bypass por cabecera ni query.
 
-## 11. D1 Time Travel
+## 10. D1 Time Travel
 
 Antes de una operación destructiva, guarda el bookmark:
 
@@ -341,7 +398,7 @@ pnpm exec wrangler d1 time-travel restore tucatalogo-prod --bookmark <bookmark>
 `--timestamp` y `--bookmark` son excluyentes. Un borrado de tienda no se puede
 deshacer por completo: D1 vuelve atrás, los objetos de R2 no.
 
-## 12. Logs y observabilidad
+## 11. Logs y observabilidad
 
 - Los cuatro workers tienen `observability.enabled` y source maps.
 - Logs en vivo:
@@ -363,7 +420,7 @@ deshacer por completo: D1 vuelve atrás, los objetos de R2 no.
   completos, email en claro ni IP en claro (solo hash). Si aparece uno, es un
   incidente de seguridad: rota el secreto afectado y revisa el log.
 
-## 13. Incidentes típicos
+## 12. Incidentes típicos
 
 | Síntoma | Causa probable | Acción |
 | --- | --- | --- |
@@ -373,7 +430,8 @@ deshacer por completo: D1 vuelve atrás, los objetos de R2 no.
 | Registro: "no pudimos verificar que no eres un robot" | Token de Turnstile ausente, caducado o rechazado; o `TURNSTILE_SECRET_KEY` mal | 400 es del token (se pide uno nuevo en el paso); 503 es configuración. En local usa `TURNSTILE_MODE=test` |
 | Imágenes 404 con la fila en D1 | `MEDIA_BASE_URL` apuntando a otro host, objeto ausente en R2 o custom domain desactivado | `curl -I` al host de media: debe responder el 404 `text/plain` de R2. Si responde el HTML del storefront, hay un worker mal enrutado |
 | `/health` 503 en un frontend | Falta `ENVIRONMENT` o `APP_DOMAIN` | Corrige `vars` del entorno y redespliega |
-| Tienda 404 tras un deploy | Storefront sirviendo otro worker/host o tienda suspendida | Sigue §7; comprueba rutas y `status` |
-| 429 inesperado en pruebas | Contador de rate limit vigente | §9; borra el bucket afectado solo en local o con justificación |
+| Tienda 404 tras un deploy | Storefront sirviendo otro worker/host o tienda suspendida | Sigue §6; comprueba rutas y `status` |
+| 429 inesperado en pruebas | Contador de rate limit vigente | §8; borra el bucket afectado solo en local o con justificación |
 | `/dev/outbox` 404 | `ENVIRONMENT` distinto de `local` o driver distinto de `memory` | Es el comportamiento correcto; usa `EMAIL_DRIVER=console` o el log |
-| `/init` 410 | Ya existe un admin | Es one-time; usa `/login`. Para recuperar acceso, §4 |
+| `/init` 410 y no hay credenciales | Ya existe un admin | Es one-time; prueba `/login` y el reset (§3); si es irrecuperable, §1.4 |
+| `/init` 200 sin pedir identidad en prod | Cloudflare Access no está aplicada | No des por bueno el alta: revisa aplicación/path/política (§1.1–1.2) |

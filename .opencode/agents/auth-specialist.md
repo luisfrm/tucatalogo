@@ -27,7 +27,7 @@ Eres especialista en autenticación con better-auth sobre Cloudflare Workers + D
 - Turnstile en la petición de OTP, verificado en servidor.
 
 ## Console
-- `/init`: el `INIT_TOKEN` vive solo en `api`; el console lo recibe del formulario y lo reenvía por binding. One-time: si ya hay admin → 410. Crea el admin, obliga a enrolar TOTP y muestra los backup codes una vez. Sin UI de gestión de admins.
+- `/init`: **no usa token**. En prod la protege **Cloudflare Access** (aplicación self-hosted sobre el path `init` de `console.tucatalogo.live`; ver `docs/adr/0002-init-without-token.md`); el formulario no envía ningún secreto. One-time: si ya hay admin → 410; rate limit por IP; `audit_log` (`admin.init`). Crea el admin, obliga a enrolar TOTP y muestra los backup codes una vez. Sin UI de gestión de admins. No reintroduzcas `INIT_TOKEN`.
 - 2FA TOTP obligatorio en toda sesión de console; el reset de contraseña no lo salta.
 
 ## Reset y abuso

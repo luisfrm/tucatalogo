@@ -15,15 +15,17 @@ no contiene secretos reales: donde aplica se usa `REPLACE_ME_*`.
   `wrangler.jsonc` del API declara `EMAIL_DRIVER=console` y el `.dev.vars` de
   trabajo (y su ejemplo) usa `EMAIL_DRIVER=memory`.
 - Los secretos viven **solo** en `apps/api`. Ni `web`, ni `commercial`, ni
-  `console` reciben `BETTER_AUTH_SECRET_*`, `INIT_TOKEN`, `RESEND_API_KEY` ni
-  `TURNSTILE_SECRET_KEY`. El console obtiene el `INIT_TOKEN` del formulario
-  `/init` y lo reenvía por service binding.
+  `console` reciben `BETTER_AUTH_SECRET_*`, `RESEND_API_KEY` ni
+  `TURNSTILE_SECRET_KEY`. El alta del console (`/init`) **no usa secreto**: el
+  formulario no envía ningún token y la página está detrás de **Cloudflare
+  Access** (path `init` de `console.tucatalogo.live`), fuera de esta tabla porque
+  no es una variable del worker.
 - No hay fallbacks: una variable obligatoria ausente o un modo desconocido
   produce 500/503 + log. El `wrangler.jsonc` de cada app documenta su `env.dev` /
   `env.prod` con placeholders `REPLACE_ME_*` hasta que el owner cree los
   recursos.
 - **Quién los define:** el owner del repo fija las variables de dev/prod en
-  `wrangler.jsonc`; los 5 secretos de runtime de prod se guardan como
+  `wrangler.jsonc`; los 4 secretos de runtime de prod se guardan como
   **Environment secrets del GitHub Environment `prod`** y se aplican al worker con
   el workflow manual `sync-secrets.yml` (`wrangler secret put --env prod`). El
   Environment `prod` no tiene reglas de protección ni aprobaciones: agrupa
@@ -48,11 +50,13 @@ no contiene secretos reales: donde aplica se usa `REPLACE_ME_*`.
    local es un fallo de configuración (503). `test` acepta cualquier token no
    vacío y no llama a la red; `enabled` exige `TURNSTILE_SECRET_KEY` y usa
    `siteverify`.
-5. **`INIT_TOKEN` solo en `api`.** 32 bytes = 64 hex, con valores distintos por
-   entorno. Comparación en tiempo constante, `/init` one-time (después 410) y
-   rate limit por IP. En local el valor de trabajo es
-   `22f305ec398dd3b1f6e629a4724e59276ee8c5fdf7aec58a6b28c18307d4e4a8` (solo
-   local; nunca se usa como secreto de prod).
+5. **El alta del console no usa secreto.** `/init` está detrás de **Cloudflare
+   Access** (aplicación self-hosted sobre `console.tucatalogo.live` con path
+   `init` y política del email del owner) y sigue siendo one-time (410 después del
+   primer admin) con rate limit por IP y `audit_log` (`admin.init`). No hay
+   `INIT_TOKEN` que generar, guardar ni rotar: no existe en `.dev.vars`, ni en el
+   worker, ni en GitHub. Si alguien encuentra un `INIT_TOKEN` huérfano en el
+   worker, ver *Limpiar `INIT_TOKEN` huérfano* más abajo.
 6. **Dos secretos de Better Auth distintos** (`_STORE` y `_CONSOLE`), uno por
    reino. Rotarlos invalida las sesiones emitidas con el anterior.
 7. **Cookies host-only.** No existe `domain=.tucatalogo.live` ni variable para
@@ -82,7 +86,6 @@ Leyenda de tipo: **var** = configuración no secreta; **secreto** = Worker secre
 | `CONSOLE_ORIGIN` | `http://localhost:5175` | `https://REPLACE_ME_DEV_CONSOLE_ORIGIN` | `https://console.tucatalogo.live` | var | Origen del enlace de reset del console |
 | `BETTER_AUTH_SECRET_STORE` | `.dev.vars` (32+ bytes) | secreto | secreto (Environment secret `prod` → `sync-secrets`) | secreto | Reino tienda; distinto por entorno |
 | `BETTER_AUTH_SECRET_CONSOLE` | `.dev.vars` (32+ bytes) | secreto | secreto (Environment secret `prod` → `sync-secrets`) | secreto | Reino console; distinto por entorno |
-| `INIT_TOKEN` | `.dev.vars` (32 bytes / 64 hex; valor local en la regla 5) | secreto (32 bytes / 64 hex) | secreto (32 bytes / 64 hex; Environment secret `prod` → `sync-secrets`) | secreto | Solo esta app; rotación en el runbook |
 | `DB` | `tucatalogo-local` | `tucatalogo-dev` | `tucatalogo-prod` | binding | D1. El `database_id` real de prod es `ed32bca0-2ed9-4a07-97e5-018e8a15049f`; el de dev sigue como `REPLACE_ME_DEV_D1_DATABASE_ID` |
 | `MEDIA_BUCKET` | `tucatalogo-local` | `tucatalogo-media-dev` | `tucatalogo-media-prod` | binding | R2 |
 
@@ -124,7 +127,7 @@ Leyenda de tipo: **var** = configuración no secreta; **secreto** = Worker secre
 | `MEDIA_BASE_URL` | `http://127.0.0.1:9797/media` | `REPLACE_ME_DEV_MEDIA_BASE_URL` | `https://bucket.tucatalogo.live` | var | Declarada; el código de `console` no la lee |
 | `API` | — (sin binding) | `tucatalogo-api-dev` | `tucatalogo-api-prod` | binding | Service binding |
 
-Sin secretos: el `INIT_TOKEN` llega del formulario `/init`.
+Sin secretos: el formulario `/init` no envía ningún token; la protección es la aplicación de Cloudflare Access sobre `console.tucatalogo.live/init`.
 
 > Los `.dev.vars.example` de `web`, `commercial` y `console` incluyen
 > `TURNSTILE_MODE` y `TURNSTILE_SITE_KEY` por simetría. Solo `commercial` lee
@@ -142,7 +145,7 @@ Environment de **GitHub** del que se leen secretos y variables.
 
 **`wrangler deploy` no aplica secretos.** Los secretos del worker se cargan una
 vez, sobreviven a los deploys y se cambian solo con `wrangler secret put`. Por eso
-los 5 runtime secrets del api viven también como **Environment secrets de `prod`** y
+los 4 runtime secrets del api viven también como **Environment secrets de `prod`** y
 se aplican con el workflow **manual**
 [`sync-secrets.yml`](../.github/workflows/sync-secrets.yml) (`target: prod`,
 `confirm: sync`).
@@ -151,7 +154,7 @@ Hay dos niveles de credenciales a propósito:
 
 - **2 Repository secrets** de Cloudflare, compartidos por cualquier job y no
   atados a un entorno concreto.
-- **5 Environment secrets** de runtime en `prod`, que solo existen como worker
+- **4 Environment secrets** de runtime en `prod`, que solo existen como worker
   secrets del api y se copian con `sync-secrets`.
 
 | Nombre | Tipo | Dónde | Uso |
@@ -160,7 +163,6 @@ Hay dos niveles de credenciales a propósito:
 | `CLOUDFLARE_ACCOUNT_ID` | Repository secret | idem | idem |
 | `BETTER_AUTH_SECRET_STORE` | Environment secret (`prod`) | *Settings → Environments → prod → Environment secrets* | Se copia al worker api con `sync-secrets` (`wrangler secret put --env prod`) |
 | `BETTER_AUTH_SECRET_CONSOLE` | Environment secret (`prod`) | idem | idem; valor **distinto** de `_STORE` |
-| `INIT_TOKEN` | Environment secret (`prod`) | idem | idem; 32 bytes / 64 hex aleatorio |
 | `RESEND_API_KEY` | Environment secret (`prod`) | idem | idem |
 | `TURNSTILE_SECRET_KEY` | Environment secret (`prod`) | idem | idem |
 | `TURNSTILE_SITE_KEY` | Environment variable (`prod`) | *Settings → Environments → prod → Environment variables* | `0x4AAAAAAGF7HGDrrRDDGsww`. Copia informativa: el valor que usa el widget es el de `env.prod` de `apps/commercial/wrangler.jsonc` |
@@ -177,7 +179,23 @@ cree la variable (en el Environment `prod` o a nivel de repo), el smoke apunta a
 debe crear la variable: un host que no existe hace fallar el smoke y con él el
 deploy.
 
-Nada de esto se guarda en el repositorio ni en `.dev.vars`. Hay tres workflows en
+### Limpiar `INIT_TOKEN` huérfano
+
+El alta del console ya no usa token (ADR 0002). Si el worker conserva el secreto de
+la versión anterior, bórralo una vez:
+
+```bash
+cd apps/api
+pnpm exec wrangler secret delete INIT_TOKEN --env prod
+pnpm exec wrangler secret delete INIT_TOKEN --env dev   # solo si dev llegó a tenerlo
+```
+
+En GitHub, elimina el *Environment secret* homónimo en *Settings → Environments →
+prod → Environment secrets*. Es limpieza, no un paso de deploy: ningún código lo
+lee. `sync-secrets.yml` ya no lo enumera (sincroniza 4 secretos).
+
+Ninguno de los secretos ni variables de GitHub de esta sección se guarda en el
+repositorio ni en `.dev.vars`. Hay tres workflows en
 `.github/workflows/` (`ci.yml`, `deploy-prod.yml` y `sync-secrets.yml`); no existe
 `deploy-dev.yml`. `ci.yml` no usa Environment; `deploy-prod.yml` y `sync-secrets.yml`
 sí (`prod`). El Environment `dev` existe en GitHub y **no se usa**: ningún workflow

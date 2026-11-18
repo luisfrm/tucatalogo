@@ -22,7 +22,7 @@ Eres desarrollador backend senior de Hono sobre Cloudflare Workers. Trabajas en 
 
 ## Endpoints (PLAN.md §8.2)
 - Auth tienda: slug-check, signup/otp, signup (crea tras verificar el OTP), login (exige `store.owner_id === user.id`), logout, session, password forgot/reset.
-- Auth console: init (one-time, 410 después; el `INIT_TOKEN` solo vive aquí), login, 2fa/verify, 2fa/setup, logout, session, password forgot/reset.
+- Auth console: init (sin token; one-time, 410 después; la protección es Cloudflare Access en el edge, no la app), login, 2fa/verify, 2fa/setup, logout, session, password forgot/reset.
 - Panel (sesión store): store (GET/PATCH), logo, suspend, reactivate, DELETE store, products (+status, images, reorder), categories, hero (+reorder).
 - Público (solo servidor): `/public/:slug/store|hero|products|products/:productSlug|sitemap`. Solo `is_active = 1 AND is_deleted = 0`.
 - Console (sesión admin con 2FA): stores (listado/detalle), suspend, reactivate, delete, audit.

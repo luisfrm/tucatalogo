@@ -18,6 +18,7 @@
 | `AGENTS.md` | Contexto operativo de los agentes y reglas no negociables |
 | `prompt.txt` | Intención original del producto (stack, apps, temas, fases) |
 | Decisiones cerradas v1.1 (2026-11-17) | Correcciones de arquitectura, auth, registro, media, hosts y alcance |
+| Decisión del owner (2026-11-18) | Alta del console sin `INIT_TOKEN`, protegida por Cloudflare Access → `docs/adr/0002-init-without-token.md` |
 | `skills-lock.json` | Confirma `ui-ux-pro-max` instalada (commit `e59ff37`, source `nextlevelbuilder/ui-ux-pro-max-skill`) |
 | `.opencode/agents/*.md` | Subagentes disponibles para delegación |
 
@@ -27,7 +28,7 @@ Verificado en disco:
 
 - Monorepo pnpm con `apps/api`, `apps/web`, `apps/commercial`, `apps/console` y los siete paquetes.
 - F1 (monorepo), F2 (API y auth), F3 (commercial), F4 (storefront y temas), F5 (`/panel-admin`) y F6 (console) implementados. `docs/` y los tres workflows (`ci.yml`, `deploy-prod.yml`, `sync-secrets.yml`) existen.
-- **Pendiente cloud:** hosts de `env.dev`, `TURNSTILE_SITE_KEY` de dev (la de prod ya está en `apps/commercial/wrangler.jsonc`), DNS de la subzona `tucatalogo.live`, permiso de rutas del token y el deploy completo de los frontends. D1/R2 de prod y los 5 secrets del worker api ya están hechos.
+- **Pendiente cloud:** hosts de `env.dev`, `TURNSTILE_SITE_KEY` de dev (la de prod ya está en `apps/commercial/wrangler.jsonc`), DNS de la subzona `tucatalogo.live`, permiso de rutas del token y el deploy completo de los frontends. D1/R2 de prod y los secretos del worker api ya están hechos.
 - Scripts reales en `package.json`: `pnpm dev` (`:api`, `:web`, `:commercial`, `:console`), `build`, `lint`, `typecheck`, `test`, `db:migrate:local`, `db:seed:local`. No existe `db:migrate:<env>`.
 
 Los comandos de este plan son los que existen hoy en `package.json` o los que ejecutan los workflows; el detalle operativo está en `README.md` y `docs/*`.
@@ -195,10 +196,12 @@ console ────┘                          └─ R2 (por entorno)
 
 **F. `/init` (primer admin)**
 
-1. `console /init`: el formulario pide el `INIT_TOKEN`; el console lo reenvía al api por service binding y no lo almacena.
-2. El API comprueba: token válido (comparación en tiempo constante), **ningún** registro en `admin_users`, rate limit.
+1. `console /init`: el formulario **no pide token**. La página está detrás de **Cloudflare Access** (aplicación self-hosted con path `init`); el console envía nombre, email y contraseña al api por service binding y no guarda secretos.
+2. El API comprueba: **ningún** registro en `admin_users`, rate limit por IP. No hay token que validar: la barrera de acceso es Access en el edge.
 3. Crea el admin, obliga a enrolar TOTP, entrega backup codes una sola vez y escribe `audit_log` (`admin.init`).
-4. Cualquier llamada posterior responde **410 Gone**, exista o no el token. Sin UI de gestión de admins en el MVP.
+4. Cualquier llamada posterior responde **410 Gone**, con o sin Access. Sin UI de gestión de admins en el MVP.
+
+> **Cambio 2026-11-18 (decisión del owner):** el alta deja de usar `INIT_TOKEN`. La protección pasa a **Cloudflare Access** sobre `console.tucatalogo.live/init`, y se mantienen el one-time (410), el rate limit y el `audit_log` (`admin.init`). **Por qué:** elimina un secreto que había que generar, distribuir a mano y rotar, y sustituye la comprobación en la aplicación por una barrera de identidad en el edge (Zero Trust), con política por email y registro de accesos. **Qué se pierde:** una barrera **independiente del edge**; si la aplicación de Access se desactiva o se le cambia el path por error, `/init` queda abierto hasta que exista un admin (después el 410 cierra el vector para siempre). Queda documentado en `docs/adr/0002-init-without-token.md`.
 
 **G. Suspensión y reactivación**
 
@@ -533,12 +536,12 @@ El OTP verifica el correo, **no** crea sesión ni tienda por sí mismo: la creac
 
 ### 7.4 `/init`
 
-- El `INIT_TOKEN` vive **solo** en el worker `api`. El console no lo guarda como secreto: lo recibe del formulario `/init` y lo reenvía al api por service binding. La comparación en tiempo constante ocurre en el api.
-- Condición: `admin_users` vacía. Si ya hay un admin → **410 Gone**, con o sin token válido. `GET /auth/console/init-status` informa si el alta sigue disponible.
+- `INIT_TOKEN` **deja de existir como secreto del worker** (cambio del 2026-11-18, decisión del owner): el alta se protege con **Cloudflare Access** sobre el path `init` de `console.tucatalogo.live` (aplicación self-hosted, política por email del owner). Decisión y consecuencias en `docs/adr/0002-init-without-token.md`; procedimiento en `docs/runbook.md`.
+- Condición: `admin_users` vacía. Si ya hay un admin → **410 Gone**, con o sin Access. `GET /auth/console/init-status` informa si el alta sigue disponible.
 - Crea el admin, exige enrolamiento TOTP antes de dar acceso, muestra los backup codes una sola vez y registra `audit_log` (`admin.init`).
 - **No emite cookies.** Devuelve `{ admin, totpUri, backupCodes, enrollmentRequired: true, enrollmentToken }`; la sesión se obtiene en `/2fa/verify`.
 - Rate limit propio. Sin UI para crear más admins en el MVP.
-- Rotación de `INIT_TOKEN` documentada en el runbook (F7).
+- Rotación del acceso al alta y del resto de secretos en el runbook (F7); el alta no tiene token que rotar.
 
 ### 7.5 2FA del console
 
@@ -622,7 +625,7 @@ repositories/ → Drizzle/D1 + R2. Devuelve modelos de dominio.
 | Método | Ruta | Notas |
 | --- | --- | --- |
 | GET | `/auth/console/init-status` | 200 `{ available }`; la UI lo usa para cerrar `/init` |
-| POST | `/auth/console/init` | `INIT_TOKEN`; one-time; 410 después; **sin cookies**; devuelve `enrollmentToken` |
+| POST | `/auth/console/init` | One-time; 410 después; **sin cookies**; no recibe token (lo protege Cloudflare Access en `/init`); devuelve `enrollmentToken` |
 | GET | `/auth/console/init-status` | `{ available }`; indica si el alta sigue abierta |
 | POST | `/auth/console/login` | Contraseña; con 2FA verificado devuelve challenge `console.two_factor`; con enrolamiento pendiente devuelve `enrollmentToken` y **ninguna** cookie |
 | POST | `/auth/console/2fa/setup` | `{ email, password }` → `totpUri`, `backupCodes`, `enrollmentToken`; **sin cookies** |
@@ -920,7 +923,7 @@ Reglas transversales del storefront:
 
 | Ruta | Contenido |
 | --- | --- |
-| `/init` | Formulario con `INIT_TOKEN` (lo reenvía, no lo guarda) + creación del primer admin + enrolamiento TOTP + backup codes |
+| `/init` | Formulario **sin token** (detrás de Cloudflare Access, path `init`) + creación del primer admin + enrolamiento TOTP + backup codes |
 | `/login` | Email + contraseña |
 | `/2fa` | Código TOTP o backup code; completa el enrolamiento con el `enrollmentToken` del body |
 | `/recuperar`, `/restablecer` (alias `/reset-password`) | Reset por email |
@@ -995,7 +998,7 @@ Nombres reales en `wrangler.jsonc`: `tucatalogo-{api,web,commercial,console}-{de
 
 Modelo **prod-only**: no hay workflow de dev. Los workflows de prod usan el
 **GitHub Environment `prod`**, que **no tiene reglas de protección ni
-aprobaciones**: agrupa los 5 runtime secrets del api y las variables del destino,
+aprobaciones**: agrupa los 4 runtime secrets del api y las variables del destino,
 no añade un paso humano. El deploy sigue siendo automático en cada push a la línea
 principal.
 
@@ -1003,15 +1006,16 @@ principal.
 | --- | --- | --- | --- |
 | `ci.yml` | PR y push a `main` | — | install con lockfile → lint → typecheck → test → build; no despliega |
 | `deploy-prod.yml` | push a `master`/`main` o `workflow_dispatch` | `prod` (+ 2 repository secrets de Cloudflare) | install → check A1 → `pnpm audit --prod --audit-level=high` → lint → typecheck → test → build → migraciones D1 prod → deploy api → web → commercial → console → deployment/D1 del API → smoke prod con `SMOKE_STORE_HOST` |
-| `sync-secrets.yml` | **solo `workflow_dispatch`** (input `target` = `prod` + `confirm` = `sync`) | `prod` | install → `wrangler secret put <NAME> --env prod` para los 5 runtime secrets del api |
+| `sync-secrets.yml` | **solo `workflow_dispatch`** (input `target` = `prod` + `confirm` = `sync`) | `prod` | install → `wrangler secret put <NAME> --env prod` para los 4 runtime secrets del api |
 
 - Un solo deploy con `concurrency: deploy-cloud` y `cancel-in-progress: false`: un deploy en curso no se corta.
 - `pnpm audit --prod --audit-level=high` corre en el workflow: una vulnerabilidad high/critical (o un fallo de la consulta) detiene el deploy de forma visible. Las excepciones van en `pnpm-workspace.yaml` → `auditConfig.ignoreGhsas` con su motivo escrito (pnpm 10: `ignoreGhsas` para GHSA, `ignoreCves` para CVE) y se retiran en cuanto haya parche. Hoy hay una: `GHSA-fc5q-39xc-vjpf` (picomatch vía `better-auth > vitest`, dev-only, sin versión parcheada).
 - Un fallo de migración detiene el deploy antes de desplegar código.
 - **API sin host público:** el smoke no puede hacer `curl` a `/health` del API. El workflow comprueba `wrangler deployments status` (deployment activo) y `d1 execute … SELECT 1` (D1 remoto); `/health` del API se ejercita en tests y en local. Un smoke real por service binding requiere una ruta en un frontend que llame al API (trabajo de F7 de las apps).
-- **Credenciales en dos niveles:** `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` son *repository secrets* (accesibles desde cualquier job con Environment); los 5 runtime secrets del api son *Environment secrets* de `prod`; `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST` son *Environment variables* de `prod` (`SMOKE_STORE_HOST` también vale a nivel de repo). El Environment `dev` existe y no se usa.
+- **Credenciales en dos niveles:** `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` son *repository secrets* (accesibles desde cualquier job con Environment); los 4 runtime secrets del api son *Environment secrets* de `prod`; `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST` son *Environment variables* de `prod` (`SMOKE_STORE_HOST` también vale a nivel de repo). El Environment `dev` existe y no se usa.
 - **`SMOKE_STORE_HOST` con fallback de CI:** si la variable no existe, el smoke apunta a `demo.tucatalogo.live` para no tumbar el deploy. Es un fallback de CI, no de runtime: el owner debe crear la variable cuando tenga una tienda real de bajo riesgo.
-- **Secretos ≠ deploy:** `wrangler deploy` no aplica secretos. `deploy-prod.yml` es **solo deploy** y no duplica el sync; los 5 runtime secrets del api se aplican con el workflow **manual** `sync-secrets.yml` (`wrangler secret put --env prod`). Ojo con la homonimia: `--env prod` es el entorno de **Wrangler**, `environment: prod` es el de **GitHub**.
+- **Secretos ≠ deploy:** `wrangler deploy` no aplica secretos. `deploy-prod.yml` es **solo deploy** y no duplica el sync; los 4 runtime secrets del api se aplican con el workflow **manual** `sync-secrets.yml` (`wrangler secret put --env prod`). Ojo con la homonimia: `--env prod` es el entorno de **Wrangler**, `environment: prod` es el de **GitHub**.
+- **Control de acceso del alta:** `/init` no tiene token; lo protege una aplicación de **Cloudflare Access** (Zero Trust) sobre `console.tucatalogo.live/init`. Debe estar activa **antes** de desplegar la versión sin token; el resto del console (login, `/2fa`, panel) no pasa por Access.
 - **Estado real:** `ci.yml` corre en PR/push; `deploy-prod.yml` y `sync-secrets.yml` se han ejecutado. Recursos creados: zona `tucatalogo.live`, D1 `tucatalogo-prod` (`ed32bca0-2ed9-4a07-97e5-018e8a15049f`) y R2 `tucatalogo-media-prod`.
 - Scripts reales: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm db:migrate:local` y `pnpm db:seed:local`. Las migraciones remotas se ejecutan con `wrangler d1 migrations apply <db> --remote --env <env>` desde el workflow (no hay script `db:migrate:<env>`).
 
@@ -1048,19 +1052,18 @@ deploy automático no toca secretos y no los borra.
 | `BETTER_AUTH_SECRET_CONSOLE` | Environment secret (`prod`) → Worker secret (**solo** `api`), por `sync-secrets` | Owner, distinto por entorno |
 | `RESEND_API_KEY` | Environment secret (`prod`) → Worker secret (api), por `sync-secrets` | Owner |
 | `TURNSTILE_SECRET_KEY` | Environment secret (`prod`) → Worker secret (api), por `sync-secrets` | Owner |
-| `INIT_TOKEN` | Environment secret (`prod`) → Worker secret (**solo** `api`), por `sync-secrets` | Owner, generado aleatorio |
 | `SMOKE_STORE_HOST` | Environment variable (`prod`) —también admite Repository variable— (no secreta) | Owner: host de la tienda de bajo riesgo para el smoke de prod. Sin ella el workflow usa `demo.tucatalogo.live` |
 | `TURNSTILE_SITE_KEY` | Variable pública de `apps/commercial/wrangler.jsonc` (`env.prod`); copia informativa como Environment variable (`prod`) | Owner; no es secreta. El valor que usa el widget es el del `wrangler.jsonc` |
 | `MEDIA_BASE_URL` | Variable por entorno (**un solo valor**) | Owner. Valores en el cuadro siguiente |
 
-Los 5 runtime secrets se guardan **una vez** como *Environment secrets* del GitHub
+Los 4 runtime secrets se guardan **una vez** como *Environment secrets* del GitHub
 Environment `prod` y se aplican al worker con el workflow **manual**
 `sync-secrets.yml` (`wrangler secret put <NAME> --env prod`). Es manual a propósito:
 `wrangler deploy` no aplica secretos, y escribir secretos en cada push no aporta
 nada. El Environment `prod` no tiene reglas de protección ni aprobaciones: agrupa
 secretos y variables por destino. El Environment `dev` existe y no se usa.
 
-El console **no** guarda `INIT_TOKEN` ni secretos de auth: recibe el token del formulario `/init` y lo reenvía por service binding; la comparación en tiempo constante ocurre en el api.
+El console **no** guarda secretos de auth ni de alta: el formulario `/init` no envía ningún token y la única barrera de acceso es la aplicación de **Cloudflare Access** delante de `console.tucatalogo.live/init` (ver ADR 0002). Un `INIT_TOKEN` huérfano en el worker se elimina con `wrangler secret delete INIT_TOKEN --env prod`; ya no se lee ni se rota.
 
 **Valores de `MEDIA_BASE_URL`:**
 
@@ -1140,7 +1143,7 @@ Regla: ningún test depende de datos de producción. Los E2E crean sus propias t
 
 | # | Criterio |
 | --- | --- |
-| 14 | `/init` funciona una sola vez (después 410), exige 2FA TOTP, login/logout y reset por email funcionan |
+| 14 | `/init` está cerrado por Cloudflare Access antes del primer admin, funciona una sola vez (después 410), exige 2FA TOTP, login/logout y reset por email funcionan |
 | 15 | Listar, buscar y ver detalle; suspender con motivo y reactivar; el owner **no** puede reactivar una suspensión administrativa |
 | 16 | Eliminar tienda con confirmación, deja `audit_log` y cuarentena de slug de 90 días |
 | 17 | Aislamiento console/store: la cookie del console no abre `/panel-admin` y la de tienda no abre el console |
@@ -1186,7 +1189,7 @@ Hitos de control: al cerrar F1 (esqueleto desplegado en dev), al cerrar F2 (auth
 | 6 | Lighthouse ≥ 90 con imágenes de hero grandes | No cumple el criterio 11 | Normalización a WebP, `srcset`, dimensiones explícitas, lazy salvo primer slide, fuentes subset |
 | 7 | Entregabilidad de Resend (OTP en spam) | Registro bloqueado | Dominio verificado con SPF/DKIM/DMARC, plantillas simples, reenvío y límites; driver de prueba en F0 |
 | 8 | Workers Paid asumido | Sin el plan de pago, los límites de CPU y R2 no cubren el diseño | Confirmar plan y presupuesto antes de F1 |
-| 9 | `/init` expuesto | Toma de control del console | `INIT_TOKEN` largo y rotado, one-time, 410 posterior, rate limit, log de intentos |
+| 9 | `/init` expuesto | Toma de control del console | **Cloudflare Access** en el path `init` (activada y verificada **antes** del deploy), one-time (410 tras el primer admin), rate limit por IP y `audit_log` de intentos. Riesgo residual: si Access se desactiva por error, `/init` queda abierto hasta que exista un admin; después el 410 cierra el vector (ADR 0002) |
 | 10 | Migraciones destructivas en prod | Pérdida de datos | Expand/contract, revisión obligatoria, Time Travel como red de seguridad |
 | 11 | Normalización de imágenes en móviles de gama baja | Fallos de memoria o imágenes rechazadas | Límite 2 MB, canvas con liberación, mensajes claros, tests en dispositivo real |
 | 12 | Precedencia de rutas de Cloudflare mal entendida | Hosts cruzados | Verificación empírica en F0 y smoke que comprueba cada host después de cada deploy |
@@ -1204,8 +1207,8 @@ Antes de F1:
 4. Token de API de Cloudflare con permisos de Workers (scripts y rutas), D1 y R2, más lectura de zona. Guardado como repository secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`.
 5. Resend con el dominio de envío verificado (SPF/DKIM) y una API key.
 6. Turnstile: site key (pública, en `apps/commercial/wrangler.jsonc`) y secret key (secreto del api) creadas para los hosts del registro.
-7. Repositorio en GitHub con los repository secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`, y un GitHub Environment `prod` (sin reglas de protección ni aprobaciones) con los 5 runtime secrets del api como *Environment secrets* (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`) y las variables `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST`. Deploy prod-only; los runtime secrets se aplican con el workflow manual `sync-secrets`.
-8. `INIT_TOKEN` generado (aleatorio, ≥ 32 bytes) y guardado como Environment secret de `prod`; no se versiona.
+7. Repositorio en GitHub con los repository secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`, y un GitHub Environment `prod` (sin reglas de protección ni aprobaciones) con los 4 runtime secrets del api como *Environment secrets* (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`) y las variables `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST`. Deploy prod-only; los runtime secrets se aplican con el workflow manual `sync-secrets`. El `INIT_TOKEN` ya no es un secreto.
+8. **Cloudflare Access** activo para el alta: aplicación self-hosted en `console.tucatalogo.live` con path `init`, política que solo admite el email del owner, verificada con `curl -sI https://console.tucatalogo.live/init` (302 a `cloudflareaccess.com`). Es requisito **previo** al deploy del console sin token; sin Access, `/init` queda abierto.
 9. **`bucket.tucatalogo.live`**: custom domain de R2 **creado y sirviendo** (`404 text/plain` de R2, TLS OK). El gate de F0 queda **resuelto por diseño** porque el wildcard de `web` vive en la subzona `*.tucatalogo.live` y no puede casar con el host del bucket en el dominio padre. Falta revalidar con `curl` cuando la subzona tenga DNS.
 10. Cuentas de correo de prueba y un buzón accesible para E2E de OTP y reset.
 

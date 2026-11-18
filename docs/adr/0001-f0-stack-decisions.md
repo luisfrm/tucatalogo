@@ -25,10 +25,12 @@
    placeholders explícitos (`REPLACE_ME_*`). Ningún ID real se versiona y no se
    ejecuta deploy ni migración remota.
 5. **Secretos por app, según `PLAN.md` §13.5.**
-   `BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN` y
-   `TURNSTILE_SECRET_KEY` viven **solo** en `apps/api/.dev.vars` en local. Los
-   frontends reciben únicamente variables públicas. Esto prevalece sobre la
-   lectura literal de "todas las variables en cada app".
+   `BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE` y
+   `TURNSTILE_SECRET_KEY` viven **solo** en `apps/api/.dev.vars` en local. (El
+   `INIT_TOKEN` que se citaba aquí se eliminó en el ADR 0002: el alta usa
+   Cloudflare Access y no tiene secreto.) Los frontends reciben únicamente
+   variables públicas. Esto prevalece sobre la lectura literal de "todas las
+   variables en cada app".
 6. **pnpm 10.34.9 y Node 22.**
    `packageManager` fija pnpm 10; `engines.node` exige `>=22.22.0 <25`. El
    entorno local verificado corre Node 24.15.0, compatible con el rango.

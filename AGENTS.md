@@ -47,7 +47,7 @@ packages/config  tsconfig, eslint, tailwind
 1. commercial, console y web hablan con api **solo por service binding**. La api no tiene ruta pública.
 2. El `storeId` sale siempre de la sesión o del slug resuelto en servidor. Nunca de un parámetro del cliente. `?siteId` solo se acepta en dev/local (storefront y `/panel-admin`) como resolución de host: no es un `storeId` de confianza, en `/panel-admin` la sesión debe ser del dueño de esa tienda, y en prod se rechaza con 400 + log.
 3. El navegador **nunca** llama al API: loaders/actions y resource routes same-origin vía `packages/api-client`. Sin TanStack Query.
-4. **Dos reinos de auth**: `store_users` (dueños) y `admin_users` (console). Dos instancias Better Auth, secretos separados, cookies **host-only** con prefijo `store` / `console`. Sin `domain=.tucatalogo.live`. `INIT_TOKEN` vive solo en `api`: el console lo recibe del formulario `/init` y lo reenvía por binding.
+4. **Dos reinos de auth**: `store_users` (dueños) y `admin_users` (console). Dos instancias Better Auth, secretos separados, cookies **host-only** con prefijo `store` / `console`. Sin `domain=.tucatalogo.live`. El alta del console (`/init`) **no usa token ni secreto**: la protege **Cloudflare Access** (aplicación self-hosted sobre `console.tucatalogo.live/init`), más one-time (410 después del primer admin), rate limit por IP y `audit_log`. Si Access no está activo, `/init` queda abierto: activarlo es requisito **previo** a desplegar (ver `docs/deploy.md` y `docs/adr/0002-init-without-token.md`).
 5. Una cuenta = una tienda (`store.owner_id` único). Suspender ≠ eliminar.
 6. `store.status` = `pending|active|suspended` + `suspendedBy` (`owner|admin`) + `suspendedReason`. **Sin `isActive`**. El owner solo reactiva si `suspendedBy = owner`; el console reactiva siempre.
 7. Registro: **nada se persiste antes del OTP**. `signup_intent` guarda email, hash del OTP, intentos y expiración; nunca la contraseña. Sin tienda `pending` ni purga a 24 h.
@@ -70,6 +70,6 @@ packages/config  tsconfig, eslint, tailwind
 - Antes de terminar: `pnpm lint`, `pnpm typecheck` y tests del área en verde (scripts definidos en F1).
 - Commits pequeños (Conventional Commits). Todo cambio de esquema lleva migración y es compatible hacia atrás.
 - Seeds SQL solo en local/dev; prod se despliega solo con esquema. El primer admin se crea con `/init`, no con seed.
-- Permisos del console: `/init` es one-time (después 410), 2FA TOTP obligatorio, sin UI de gestión de admins.
+- Permisos del console: `/init` está detrás de Cloudflare Access y es one-time (después 410), 2FA TOTP obligatorio, sin UI de gestión de admins.
 - Registro con Turnstile y páginas de términos/privacidad; Worker Paid asumido.
 - Criterio de parada: 13 criterios del baseline + 4 de console + no-fallback (§15 de `PLAN.md`).

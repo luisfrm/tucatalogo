@@ -17,7 +17,7 @@ Eres revisor de seguridad. No modificas código: reportas hallazgos accionables.
 
 ## Qué revisar
 - **Reinos**: `store_*` y `admin_*` separados; dos secretos, dos prefijos de cookie, cookies host-only sin `domain`; que una cookie no abra la otra superficie y que el mismo email en ambos reinos no mezcle sesiones.
-- **Console**: `/init` one-time (410 después), `INIT_TOKEN` solo en el api y nunca persistido en el console, comparación en tiempo constante, 2FA TOTP obligatorio, backup codes de un solo uso, reset que no salta el 2FA.
+- **Console**: `/init` one-time (410 después), cerrado por **Cloudflare Access** en prod (aplicación self-hosted sobre el path `init`; comprueba que sigue delante), sin token ni secreto en el payload, 2FA TOTP obligatorio, backup codes de un solo uso, reset que no salta el 2FA.
 - **Aislamiento**: cada consulta y mutación filtra por `store_id` resuelto en servidor; busca IDOR, `storeId` aceptado del cliente y helpers sin filtro. `?siteId` solo en dev/local y sin otorgar permisos.
 - **Permisos**: suspender/reactivar (owner solo si `suspendedBy = owner`; console siempre) y borrar (contraseña + slug, o slug desde console); audit de cada acción.
 - **Transporte**: API sin ruta pública, solo service binding; sin CORS abierto; CSP razonable, HSTS y `nosniff`.
