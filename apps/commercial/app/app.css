@@ -5,9 +5,9 @@
 @source "../../../packages/ui/src";
 
 /*
- * Base de la superficie `commercial`. Los colores, radios, sombras y
- * tipografías salen de los tokens que `renderAdminStyleTag({ surface:
- * "commercial" })` escribe en el `<head>`; aquí no hay hex sueltos.
+ * Base de la superficie `commercial`. Los colores, radios, sombras,
+ * tipografías y degradados salen de los tokens que `renderAdminStyleTag({
+ * surface: "commercial" })` escribe en el `<head>`; aquí no hay hex sueltos.
  */
 html,
 body {
@@ -31,6 +31,41 @@ section[id] {
 /* Los tokens del tema dentro de una preview no deben cambiar el fondo global. */
 [data-theme] {
   isolation: isolate;
+}
+
+/*
+ * Tokens aditivos de la marca (`commercialExtraVars`) expuestos como
+ * utilidades: el markup usa nombres legibles y el valor sigue viviendo en
+ * `packages/themes`.
+ */
+@utility font-display {
+  font-family: var(--font-display);
+}
+
+/* Fondo del hero (`linear-gradient` cálido de papel a rosa). */
+@utility bg-hero {
+  background-image: var(--gradient-hero);
+}
+
+/* Bloque de conversión: vino profundo, `on-primary` ≥10:1 en todos los stops. */
+@utility bg-cta {
+  background-image: var(--gradient-cta);
+}
+
+/* Lavado radial para bandas intermedias, sin competir con el hero. */
+@utility bg-wash {
+  background-image: var(--gradient-wash);
+}
+
+/* El marcador nativo de `<details>` rompe la alineación del chevron propio. */
+@utility marker-hidden {
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &::marker {
+    content: "";
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

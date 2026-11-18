@@ -1,6 +1,7 @@
 import type { ThemeMetadata } from "@tucatalogo/themes";
 
 import { StorefrontPreview } from "~/components/storefront-preview";
+import { ThemeFontLoader } from "~/components/theme-fonts";
 
 /**
  * Selector de tema del paso 2. Cada tarjeta es un `label` con un radio real
@@ -32,6 +33,9 @@ export function ThemePicker({
         Todos los temas comparten la misma estructura y tienen versión clara y oscura.
         Podrás cambiarlo cuando quieras desde el panel.
       </p>
+
+      {/* Las previews usan la tipografía real de cada tema: se piden aquí. */}
+      <ThemeFontLoader target="#signup-theme" />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {themes.map((theme) => {

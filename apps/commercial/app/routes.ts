@@ -7,5 +7,6 @@ export default [
   route("terminos", "routes/terminos.tsx"),
   route("privacidad", "routes/privacidad.tsx"),
   route("favicon.ico", "routes/favicon.ts"),
+  route("theme-fonts.css", "routes/theme-fonts.ts"),
   route("health", "routes/health.ts"),
 ] satisfies RouteConfig;
