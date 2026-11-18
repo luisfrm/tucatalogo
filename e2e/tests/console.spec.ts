@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 
 import { expectNoSeriousA11yViolations } from "../lib/axe";
@@ -8,6 +8,7 @@ import { currentTotp, secretFromTotpUri } from "../lib/totp";
 import {
   panelStatePath,
   patchState,
+  readConsoleAdmin,
   readState,
   type ConsoleAdminState,
 } from "../lib/state";
@@ -16,11 +17,15 @@ import {
  * Console (PLAN §15.2 #14–#17 y §15.1 #6):
  * `/init` one-time (410 después), 2FA TOTP obligatorio, backup code,
  * listado/búsqueda/detalle, suspensión con motivo, owner bloqueado, reactivación,
- * auditoría y borrado con cuarentena de slug.
+ * aislamiento de reinos y auditoría.
  *
- * Este proyecto corre al final: elimina la tienda desechable.
+ * Deliberadamente **sin `mode: "serial"`**: los tests comparten estado por
+ * `e2e/.state` (un solo worker y orden de declaración), pero un fallo —por
+ * ejemplo una violación de axe— ya no salta los tests siguientes. Cada test
+ * declara su precondición y se salta con motivo si no la tiene. El borrado de la
+ * tienda desechable vive en `console-delete.spec.ts`, que sí depende de todo lo
+ * demás porque deja el estado final.
  */
-test.describe.configure({ mode: "serial" });
 
 const state = readState();
 const store = state.disposable;
@@ -33,6 +38,30 @@ async function initAvailable(): Promise<boolean> {
   return payload.available === true;
 }
 
+/**
+ * `POST /init` desde la propia página del console, sin seguir el redirect.
+ * El API comprueba primero si ya hay admin, así que con el alta consumida el
+ * status es 410 aunque el token sea válido.
+ */
+async function secondInitStatus(page: Page): Promise<number> {
+  return page.evaluate(async (token) => {
+    const body = new URLSearchParams({
+      initToken: token,
+      name: "Admin duplicado",
+      email: "duplicado@example.test",
+      password: "Duplicado2026!",
+      confirmPassword: "Duplicado2026!",
+    });
+    const response = await fetch("/init", {
+      method: "POST",
+      body,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      redirect: "manual",
+    });
+    return response.status;
+  }, INIT_TOKEN);
+}
+
 async function totpFor(secret: string): Promise<string> {
   return currentTotp(secret);
 }
@@ -43,18 +72,40 @@ test("crea el admin con /init, enrola 2FA y no permite un segundo alta", async (
 }) => {
   test.setTimeout(240_000);
 
-  await page.goto(`${CONSOLE_URL}/init`);
-  await expectNoSeriousA11yViolations(page, "console/init");
-
   const available = await initAvailable();
 
   if (!available) {
-    const existing = readState().consoleAdmin;
-    test.skip(
-      !existing,
-      "Ya hay un admin de console en la D1 local. Ejecuta `node e2e/scripts/reset-admin.mjs` (con los servidores parados) para repetir /init.",
-    );
+    // `/init` ya está consumida: crear otro admin es imposible por contrato, así
+    // que no tiene sentido rellenar el formulario (el action respondería 410).
+    // Se comprueba el lado cerrado del contrato y se reutiliza el admin de la
+    // pasada anterior, que vive en `e2e/.state/console-admin.json` y sobrevive a
+    // la reescritura de `run.json` que hace `setup`. Nada de limpiar la D1 a mano.
+    await page.goto(`${CONSOLE_URL}/init`);
+    await expect(
+      page.getByRole("heading", { name: "Alta inicial cerrada" }),
+      "con un admin en la D1 local, /init no debe ofrecer el formulario",
+    ).toBeVisible();
+    expect(await secondInitStatus(page), "segundo /init debe responder 410").toBe(410);
+
+    const persisted = readConsoleAdmin();
+    if (!persisted) {
+      test.skip(
+        true,
+        "La D1 local ya tiene un admin de console y no hay credenciales de una pasada anterior en e2e/.state/console-admin.json. Ese admin se creó fuera del E2E: con los servidores parados, `node e2e/scripts/reset-admin.mjs` habilita un alta nueva; no hace falta repetirlo en pasadas posteriores.",
+      );
+      return;
+    }
+
+    test.info().annotations.push({
+      type: "console-admin",
+      description: `reutilizado de una pasada anterior: ${persisted.email}`,
+    });
+    patchState({ consoleAdmin: persisted });
+    return;
   }
+
+  await page.goto(`${CONSOLE_URL}/init`);
+  await expectNoSeriousA11yViolations(page, "console/init");
 
   await page.locator("#initToken").fill(INIT_TOKEN);
   await page.locator("#name").fill("Admin E2E");
@@ -83,6 +134,7 @@ test("crea el admin con /init, enrola 2FA y no permite un segundo alta", async (
     totpSecret: secret,
     backupCodes,
   };
+  // `patchState` lo replica en `console-admin.json` para las próximas pasadas.
   patchState({ consoleAdmin });
 
   // Sin cookie de sesión todavía: /console/* responde 403/401.
@@ -95,23 +147,7 @@ test("crea el admin con /init, enrola 2FA y no permite un segundo alta", async (
   await expect(page.getByRole("heading", { name: "Tiendas" })).toBeVisible({ timeout: 30_000 });
 
   // `/init` es one-time: el segundo intento responde 410 Gone.
-  const secondInit = await page.evaluate(async (token) => {
-    const body = new URLSearchParams({
-      initToken: token,
-      name: "Admin duplicado",
-      email: "duplicado@example.test",
-      password: "Duplicado2026!",
-      confirmPassword: "Duplicado2026!",
-    });
-    const response = await fetch("/init", {
-      method: "POST",
-      body,
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      redirect: "manual",
-    });
-    return response.status;
-  }, INIT_TOKEN);
-  expect(secondInit).toBe(410);
+  expect(await secondInitStatus(page)).toBe(410);
 
   // Y la página de /init ya no ofrece el formulario.
   await page.goto(`${CONSOLE_URL}/init`);
@@ -123,8 +159,9 @@ test("lista, busca, suspende con motivo y reactiva; el owner no puede reactivar"
   context,
 }) => {
   test.setTimeout(240_000);
-  const admin = readState().consoleAdmin!;
-  test.skip(!admin, "El admin del console no está en e2e/.state: ejecuta e2e/scripts/reset-admin.mjs.");
+  const admin = readState().consoleAdmin;
+  test.skip(!admin, "El alta del console no corrió en esta pasada: no hay admin que reutilizar.");
+  if (!admin) return;
   let storeId: string | null = null;
 
   await test.step("login con contraseña + TOTP", async () => {
@@ -159,6 +196,47 @@ test("lista, busca, suspende con motivo y reactiva; el owner no puede reactivar"
     const stats = await content.innerText();
     expect(stats).toContain("10");
     expect(stats).toContain("2");
+
+    // axe del shell rediseñado: listado, ficha, vacío y error a 1280 y 390.
+    // `expect.soft`: si una superficie falla, las demás se auditan igual y el
+    // test no corta el flujo antes de suspender/reactivar.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${CONSOLE_URL}/`);
+    await expect(page.getByRole("heading", { name: "Tiendas" })).toBeVisible();
+    await expectNoSeriousA11yViolations(page, "console/tiendas-1280");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoSeriousA11yViolations(page, "console/tiendas-390");
+
+    // Estado vacío: la búsqueda no coincide con ninguna tienda.
+    await page.goto(`${CONSOLE_URL}/?q=zzz-sin-coincidencias-e2e`);
+    await expect(page.getByText("Ninguna tienda coincide")).toBeVisible();
+    await expectNoSeriousA11yViolations(page, "console/vacio-390");
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expectNoSeriousA11yViolations(page, "console/vacio-1280");
+
+    // Estado de error: ficha de una tienda que no existe (404 del api).
+    const missing = await page.goto(
+      `${CONSOLE_URL}/tiendas/00000000-0000-4000-8000-000000000000`,
+    );
+    expect(missing?.status(), "ficha inexistente").toBe(404);
+    await expect(page.getByRole("heading", { name: "No encontramos esa tienda" })).toBeVisible();
+    await expectNoSeriousA11yViolations(page, "console/error-1280");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoSeriousA11yViolations(page, "console/error-390");
+
+    // Ficha real, a los dos anchos (donde sigue el test).
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${CONSOLE_URL}/tiendas/${storeId}`);
+    await expect(page.getByRole("heading", { name: store.storeName, level: 1 })).toBeVisible();
+    await expectNoSeriousA11yViolations(page, "console/detalle-1280");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoSeriousA11yViolations(page, "console/detalle-390");
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${CONSOLE_URL}/tiendas/${storeId}`);
   });
 
   await test.step("suspende con motivo y verifica 404 + panel con banner", async () => {
@@ -201,6 +279,10 @@ test("lista, busca, suspende con motivo y reactiva; el owner no puede reactivar"
     await expect(page.getByText("store.suspend").first()).toBeVisible();
     await expect(page.getByText("store.reactivate").first()).toBeVisible();
     await expectNoSeriousA11yViolations(page, "console/auditoria");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoSeriousA11yViolations(page, "console/auditoria-390");
+    await page.setViewportSize({ width: 1280, height: 900 });
   });
 
   await test.step("aislamiento de reinos con cookies reales", async () => {
@@ -259,8 +341,9 @@ test("lista, busca, suspende con motivo y reactiva; el owner no puede reactivar"
 
 test("recupera la contraseña del console por email y entra con el nuevo 2FA", async ({ page }) => {
   test.setTimeout(180_000);
-  const admin = readState().consoleAdmin!;
-  test.skip(!admin, "El admin del console no está en e2e/.state: ejecuta e2e/scripts/reset-admin.mjs.");
+  const admin = readState().consoleAdmin;
+  test.skip(!admin, "El alta del console no corrió en esta pasada: no hay admin que reutilizar.");
+  if (!admin) return;
 
   const newPassword = `ConsoleReset2026!${readState().runId.slice(-4)}`;
 
@@ -296,9 +379,10 @@ test("recupera la contraseña del console por email y entra con el nuevo 2FA", a
 
 test("entra con un backup code y el logout invalida la sesión", async ({ page }) => {
   test.setTimeout(180_000);
-  const admin = readState().consoleAdmin!;
+  const admin = readState().consoleAdmin;
+  test.skip(!admin, "El alta del console no corrió en esta pasada: no hay admin que reutilizar.");
+  if (!admin) return;
   const code = admin.backupCodes.at(-1);
-  test.skip(!admin, "El admin del console no está en e2e/.state: ejecuta e2e/scripts/reset-admin.mjs.");
   test.skip(!code, "No quedan backup codes guardados de este admin.");
 
   // Sin cookies: el console exige sesión y redirige al login.
@@ -326,50 +410,4 @@ test("entra con un backup code y el logout invalida la sesión", async ({ page }
   patchState({
     consoleAdmin: { ...admin, backupCodes: admin.backupCodes.slice(0, -1) },
   });
-});
-
-test("elimina la tienda desechable con confirmación, audit y cuarentena", async ({ page }) => {
-  test.setTimeout(180_000);
-  const admin = readState().consoleAdmin!;
-  test.skip(!admin, "El admin del console no está en e2e/.state: ejecuta e2e/scripts/reset-admin.mjs.");
-
-  await page.goto(`${CONSOLE_URL}/login`);
-  await page.locator("#email").fill(admin.email);
-  await page.locator("#password").fill(admin.password);
-  await page.getByRole("button", { name: "Continuar" }).click();
-  await expect(page).toHaveURL(/\/2fa/, { timeout: 30_000 });
-  await page.locator("#code").fill(await totpFor(admin.totpSecret));
-  await page.getByRole("button", { name: "Verificar y entrar" }).click();
-  await expect(page.getByRole("heading", { name: "Tiendas" })).toBeVisible({ timeout: 30_000 });
-
-  await page.goto(`${CONSOLE_URL}/?q=${encodeURIComponent(store.slug)}`);
-  await page.getByRole("link", { name: store.storeName }).first().click();
-
-  await page.getByRole("button", { name: "Eliminar tienda" }).click();
-  await page.getByRole("dialog").locator("#confirm-slug").fill(store.slug);
-  await page.getByRole("dialog").getByRole("button", { name: "Eliminar definitivamente" }).click();
-
-  await expect(page).toHaveURL(new RegExp(`/\\?eliminada=${store.slug}`), { timeout: 30_000 });
-  await expect(page.getByText("Tienda eliminada")).toBeVisible();
-
-  // Storefront permanente 404 y slug en cuarentena (rechazado con motivo).
-  expect((await page.goto(storefrontUrl(store.slug)))?.status()).toBe(404);
-
-  const slugCheck = await page.goto(
-    `http://localhost:5174/registro/slug-check?slug=${store.slug}`,
-  );
-  expect(slugCheck?.status()).toBe(200);
-  const payload = JSON.parse(await page.locator("body").innerText()) as {
-    available: boolean;
-    reason?: string;
-  };
-  expect(payload.available).toBe(false);
-  expect(payload.reason).toBe("quarantined");
-
-  // El login del dueño ya no existe: su cuenta se borró con la tienda.
-  const loginAfterDelete = await page.goto(panelUrl(store.slug, "login"));
-  expect([404, 200]).toContain(loginAfterDelete?.status());
-
-  // qa-store sigue intacta.
-  expect((await page.goto(storefrontUrl(state.qaStore!.slug)))?.status()).toBe(200);
 });

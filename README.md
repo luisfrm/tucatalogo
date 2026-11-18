@@ -267,26 +267,42 @@ locales y la D1 con migraciones.
 | `panel` | Login, categoría, 10 productos, imágenes (WebP normalizado en el navegador), 2 slides de hero, tema/color/moneda/WhatsApp, suspensión del dueño y reset de contraseña |
 | `storefront` | Home, ficha, modo oscuro por cookie, SEO y 404 (inexistente, reservado, producto inexistente) |
 | `isolation` | La sesión de una tienda no lee ni escribe datos de otra (403/404) |
-| `axe` | Sin violaciones critical/serious en storefront, ficha y logins |
-| `console` | `/init` one-time (410 después), 2FA TOTP, backup code, reset de contraseña por email, listado/detalle, suspender con motivo, owner bloqueado, reactivar, auditoría y borrado con cuarentena |
+| `axe` | Sin violaciones critical/serious en storefront, ficha, panel autenticado, logins de panel/console y las dos superficies de commercial |
+| `console` | `/init` one-time (410 después), 2FA TOTP, backup code, reset de contraseña por email, listado/detalle, suspender con motivo, owner bloqueado, reactivar, aislamiento de reinos y auditoría |
+| `console-delete` | Borrado de la tienda desechable con confirmación por slug, audit y cuarentena (deja el estado final) |
 
 Convenciones:
 
-- Los proyectos van encadenados (`dependencies`) y el último (`console`) **borra**
-  la tienda desechable. `qa-store` (`qa-store@example.test` / `QaStore2026!`, en
+- Los proyectos van encadenados (`dependencies`), pero las dependencias expresan
+  **datos**, no salud: `setup` crea la tienda y `panel` su catálogo. Las
+  auditorías de axe viven en proyectos de los que nadie depende (`axe` y
+  `console`) y el último proyecto (`console-delete`) **borra** la tienda
+  desechable. Un fallo de accesibilidad nunca salta el resto de la suite.
+- Ningún proyecto usa `mode: "serial"`: los tests comparten estado por
+  `e2e/.state` (un solo worker, orden de declaración) y cada uno declara su
+  precondición. Si falta, se salta con el motivo en el reporte.
+- `qa-store` (`qa-store@example.test` / `QaStore2026!`, en
   `http://qa-store.localhost:5173`) es la tienda de referencia: los E2E **no** la
   borran ni la suspenden de forma permanente.
 - Turnstile usa el sitekey de prueba oficial con `TURNSTILE_MODE=test`; el test
   espera el token real del widget y **no** hay bypass.
 - El estado de la ejecución queda en `e2e/.state/` (ignorado por git): slug,
-  credenciales y secreto TOTP del admin del console.
-- `/init` es one-time. Para repetir la suite tras un fallo en el proyecto
-  `console`, con los servidores parados:
+  credenciales y secreto TOTP del admin del console. Las credenciales del admin
+  viven en `e2e/.state/console-admin.json` para sobrevivir a la reescritura de
+  `run.json` de cada pasada.
+- `/init` es one-time. Si la D1 local ya tiene un admin, el proyecto `console`
+  **no** rellena el formulario: comprueba el 410 y reutiliza el admin de la pasada
+  anterior. Solo si el admin se creó fuera del E2E (sin credenciales guardadas)
+  hay que vaciar el reino admin una vez, con los servidores parados:
 
   ```bash
-  node e2e/scripts/reset-admin.mjs      # vacía admin_* (nunca store_*)
+  node e2e/scripts/reset-admin.mjs         # vacía admin_* (nunca store_*)
   node e2e/scripts/reset-local-limits.mjs  # borra rate_limit_counter locales
   ```
+
+  Pasadas consecutivas dentro de la misma ventana de 15 min siguen necesitando
+  `reset-local-limits.mjs`: los topes de login del MVP (5 por IP+email) son
+  intencionados y el E2E no los toca.
 
 - Tiendas `e2e-*` que hayan quedado de una ejecución fallida:
 

@@ -7,6 +7,12 @@ import { expect, type Page } from "@playwright/test";
  * Se excluyen las reglas que dependen de recursos de terceros que no están bajo
  * control del producto (el iframe de Turnstile), y nada más: cualquier
  * violación real de contraste, labels o landmarks debe fallar el test.
+ *
+ * La aserción es **soft** a propósito: una superficie con violaciones no corta el
+ * resto del flujo ni las demás auditorías de ese test, así que el reporte trae
+ * todas las violaciones de una pasada en vez de la primera. Los proyectos que
+ * auditan accesibilidad (`axe`, `console`) no son dependencia de nadie, de modo
+ * que un fallo aquí tampoco puede saltarse el resto de la suite.
  */
 const DISABLED_RULES = ["frame-tested"];
 
@@ -43,8 +49,17 @@ export async function expectNoSeriousA11yViolations(page: Page, surface: string)
     nodes: violation.nodes.map((node) => node.target.join(" ")).slice(0, 5),
   }));
 
+  // Detalle legible en el mensaje: el reporte debe decir qué regla, en qué
+  // superficie y en qué selector, sin abrir el JSON del diff.
+  const detail = summary
+    .map((violation) => `  · ${violation.id} (${violation.impact}): ${violation.help}\n    ${violation.nodes.join("\n    ")}`)
+    .join("\n");
+
   await expect
-    .soft(blockers, `axe · ${surface} · violaciones critical/serious` as string)
+    .soft(
+      blockers,
+      `axe · ${surface} · violaciones critical/serious${detail ? `\n${detail}` : ""}` as string,
+    )
     .toEqual([]);
 
   if (summary.length > 0) {

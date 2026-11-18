@@ -11,7 +11,13 @@ import { defineConfig, devices } from "@playwright/test";
  * desechable creada por `setup` (registro real por UI) y el console se crea una
  * sola vez:
  *
- *   setup → panel → storefront → isolation → axe → console (elimina la tienda)
+ *   setup → panel → storefront → isolation → axe → console → console-delete
+ *
+ * Las dependencias expresan **datos** (`setup` crea la tienda, `panel` su
+ * catálogo), no salud: un proyecto que falla solo salta a los que dependen de
+ * esos datos. Las auditorías de axe viven en proyectos de los que nadie depende
+ * (`axe`, `console`) y el borrado, que sí depende de todos, va al final: así una
+ * violación de accesibilidad nunca impide ver el resultado del resto.
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -66,11 +72,18 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      // Último a propósito: suspende, reactiva y elimina la tienda desechable.
       name: "console",
       testDir: "./e2e/tests",
       testMatch: /console\.spec\.ts/,
-      dependencies: ["setup", "panel", "isolation", "axe"],
+      dependencies: ["setup", "panel"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      // Último a propósito: elimina la tienda desechable y deja el estado final.
+      name: "console-delete",
+      testDir: "./e2e/tests",
+      testMatch: /console-delete\.spec\.ts/,
+      dependencies: ["setup", "panel", "storefront", "isolation", "axe", "console"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

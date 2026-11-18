@@ -71,7 +71,8 @@ export async function registerStore(page: Page, input: RegisterInput): Promise<R
   await page.getByRole("button", { name: "Verificar y crear mi tienda" }).click();
 
   // Paso 4 — confirmación con los enlaces de tienda y panel.
-  await expect(page.getByText("Tienda publicada")).toBeVisible({ timeout: 30_000 });
+  // `exact: true`: el paso 1 también dice "…y tu tienda publicada".
+  await expect(page.getByText("Tienda publicada", { exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(`${input.storeName} ya tiene su catálogo`)).toBeVisible();
 
   const storefrontLink = await page

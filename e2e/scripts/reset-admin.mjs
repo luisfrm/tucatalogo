@@ -8,6 +8,12 @@ import path from "node:path";
  * `/init` es one-time: para repetir el alta hay que vaciar el reino admin. El
  * script es explícito y **solo** toca las tablas `admin_*`, nunca `store_*`.
  *
+ * Ya **no** hace falta para repetir la suite: si la D1 tiene un admin, el
+ * proyecto `console` comprueba el 410 y reutiliza el admin de la pasada anterior
+ * (`e2e/.state/console-admin.json`). Solo sirve para el caso en que el admin se
+ * creó fuera del E2E y no hay credenciales guardadas, o para estrenar un admin
+ * nuevo. Tras vaciarlo, la siguiente pasada crea uno y sobrescribe ese archivo.
+ *
  * Uso (con los servidores de desarrollo parados, para no competir por el
  * fichero SQLite):
  *   node e2e/scripts/reset-admin.mjs

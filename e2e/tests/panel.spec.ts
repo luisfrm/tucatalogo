@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-import { expectNoSeriousA11yViolations } from "../lib/axe";
 import { panelUrl, storefrontUrl } from "../lib/config";
 import { loginPanel, logoutPanel, savePanelSession } from "../lib/flows";
 import { heroFixtures, productFixture } from "../lib/media";
@@ -12,9 +11,12 @@ import { patchState, readState } from "../lib/state";
  * login, categoría, 10 productos con imágenes, hero con 2 slides
  * (escritorio + móvil), tema/color/moneda/WhatsApp, suspensión del owner y
  * recuperación de contraseña.
+ *
+ * **Sin `mode: "serial"` ni aserciones de axe**: este proyecto es dependencia de
+ * `storefront`, `axe` y `console`, así que nada de lo que pase aquí puede
+ * saltarse proyectos enteros. Las auditorías de accesibilidad del panel viven en
+ * `axe.spec.ts` (proyecto del que nadie depende) y aquí solo queda el flujo.
  */
-test.describe.configure({ mode: "serial" });
-
 const PRODUCT_COUNT = 10;
 
 test("publica el catálogo completo desde el panel", async ({ page }) => {
@@ -22,12 +24,6 @@ test("publica el catálogo completo desde el panel", async ({ page }) => {
   const state = readState();
   const store = state.disposable;
   const base = storefrontUrl(store.slug);
-
-  await test.step("axe en el login del panel", async () => {
-    await page.goto(panelUrl(store.slug, "login"));
-    await expect(page.getByRole("heading", { name: "Entra a tu tienda" })).toBeVisible();
-    await expectNoSeriousA11yViolations(page, "panel-admin/login");
-  });
 
   await test.step("login del dueño", async () => {
     await loginPanel(page, store.slug, store.email, store.password);
@@ -229,11 +225,6 @@ test("publica el catálogo completo desde el panel", async ({ page }) => {
     await page.getByRole("button", { name: "Reactivar tienda" }).click();
     await expect(page.getByText(/La tienda volvió a estar activa/)).toBeVisible();
     expect((await page.goto(base))?.status()).toBe(200);
-  });
-
-  await test.step("axe en el panel autenticado", async () => {
-    await page.goto(panelUrl(store.slug, "productos"));
-    await expectNoSeriousA11yViolations(page, "panel-admin/productos");
   });
 });
 
