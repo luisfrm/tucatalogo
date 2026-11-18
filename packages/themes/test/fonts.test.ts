@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BRAND_FALLBACK_WIDTH_RATIO,
+  BRAND_WEBFONT_METRICS,
   FONT_BASE_PATH,
   LATIN_UNICODE_RANGE,
   THEME_FONTS,
+  THEME_FONT_FALLBACKS,
   THEME_FONT_SLUGS,
+  renderFallbackFontFaceCss,
   renderFontFaceCss,
   renderFontFaceStyleTag,
   themeFontFiles,
   themePreloadLinks,
+  type BrandFontSlug,
 } from "../src/fonts";
 import { THEME_IDS } from "../src/ids";
 import { ThemeNotAvailableError } from "../src/types";
@@ -74,6 +79,49 @@ describe("fuentes self-hosted", () => {
     );
     expect(themePreloadLinks("velvet-noir")).not.toContain("fredoka");
     expect(themePreloadLinks("velvet-noir")).toContain('crossorigin="anonymous"');
+  });
+
+  it("registra la sustitución de marca con métricas derivadas de la webfont", () => {
+    const css = renderFallbackFontFaceCss();
+    expect(css).toContain('font-family: "Fraunces Fallback";');
+    expect(css).toContain('src: local("Georgia");');
+    expect(css).toContain("size-adjust: 107.25%;");
+    expect(css).toContain("ascent-override: 91.19%;");
+    expect(css).toContain("descent-override: 23.78%;");
+    expect(css).toContain('font-family: "Figtree Fallback";');
+    expect(css).toContain("size-adjust: 100%;");
+    expect(css).toContain("ascent-override: 95%;");
+    expect(css).toContain("descent-override: 25%;");
+  });
+
+  it("no declara nombres `local()` que no resuelven (genéricos o alias)", () => {
+    // `local()` solo casa con caras instaladas: `local("Serif")` o
+    // `local("sans-serif")` no resuelven y dejan la cara sin ajuste métrico.
+    const generic = /^(serif|sans-serif|monospace|cursive|fantasy|system-ui)$/i;
+    for (const fallback of Object.values(THEME_FONT_FALLBACKS)) {
+      expect(fallback.localSources.length).toBeGreaterThan(0);
+      for (const name of fallback.localSources) {
+        expect(generic.test(name)).toBe(false);
+        expect(name).toBe(name.trim());
+        expect(name).not.toContain('"');
+      }
+    }
+    expect(THEME_FONT_FALLBACKS.fraunces.localSources).toEqual(["Georgia"]);
+    expect(THEME_FONT_FALLBACKS.figtree.localSources[0]).toBe("Arial");
+  });
+
+  it("mantiene los overrides coherentes con `size-adjust` y la métrica real", () => {
+    const parse = (value: string) => Number.parseFloat(value.replace("%", "")) / 100;
+    for (const fallback of Object.values(THEME_FONT_FALLBACKS)) {
+      const metrics = BRAND_WEBFONT_METRICS[fallback.slug as BrandFontSlug];
+      const ratio = parse(fallback.sizeAdjust);
+      expect(ratio).toBeCloseTo(fallback.sizeAdjustRatio, 6);
+      expect(fallback.sizeAdjustRatio).toBe(BRAND_FALLBACK_WIDTH_RATIO[fallback.slug as BrandFontSlug]);
+      // El override se aplica sobre el em ya escalado: webfont ÷ size-adjust.
+      expect(parse(fallback.ascentOverride) * ratio).toBeCloseTo(metrics.ascent, 3);
+      expect(parse(fallback.descentOverride) * ratio).toBeCloseTo(metrics.descent, 3);
+      expect(parse(fallback.lineGapOverride) * ratio).toBeCloseTo(metrics.lineGap, 3);
+    }
   });
 
   it("no cae a las fuentes del sistema si el tema no existe", () => {

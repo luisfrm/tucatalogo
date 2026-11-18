@@ -44,6 +44,37 @@ const boot = renderThemeBootstrap({ themeId, mode, primaryColor });
 // boot.htmlAttributes → data-theme="..." data-color-mode="..."
 ```
 
+## Sustituciones con métricas ajustadas (marca)
+
+`commercial` y `console` usan el par de marca Fraunces + Figtree y, además de
+las caras reales, registran una cara de sustitución sin descarga
+(`THEME_FONT_FALLBACKS`, `renderBrandFontFaceCss()`):
+
+| Familia real | Cara local | `size-adjust` | `ascent-override` | `descent-override` |
+| --- | --- | --- | --- | --- |
+| Fraunces (`100 900`) | `local("Georgia")` | `107.25%` | `91.19%` | `23.78%` |
+| Figtree (`300 900`) | `local("Arial")` | `100%` | `95%` | `25%` |
+
+Cómo se obtienen (no se copian a mano: se derivan en `src/fonts.ts`):
+
+- `size-adjust` = ancho de la webfont ÷ ancho de la cara local, medido en
+  Chromium **sobre los textos y cuerpos reales** de la landing (40/28/24/18/16
+  px, con `letter-spacing` y `font-optical-sizing: auto`). Fraunces tiene eje
+  `opsz`: medir una única muestra a 400 px la estrecha y da una base falsa.
+- `ascent/descent-override` = métrica `hhea` de la webfont (Fraunces
+  1956/-510 sobre 2000; Figtree 950/-250 sobre 1000) ÷ `size-adjust`, porque el
+  override se aplica sobre el em ya escalado.
+- `local()` solo casa con **nombres de familia instalados**: `local("Serif")` o
+  `local("Georgia Pro")` no resuelven y dejan la cara sin `src` (sin ajuste).
+  Por eso la lista solo contiene nombres reales y medidos.
+
+El `@font-face` de sustitución no declara `font-weight`, así que cubre 400 y es
+la cara que se usa también con los titulares de 600 (Georgia Regular, no
+Georgia Bold). `font-display` se queda en **`swap`**: con las métricas
+corregidas el intercambio no mueve el layout y el `h1` nunca se queda sin
+pintar. `block` retrasa el LCP ~200 ms en 1.6 Mbps y `optional` deja el `h1`
+pintado con Georgia de forma permanente en esa misma conexión.
+
 ## Reemplazar o añadir familias
 
 1. Descargar el `woff2` del subset latino y su `OFL.txt`.

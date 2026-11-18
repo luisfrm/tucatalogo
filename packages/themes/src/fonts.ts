@@ -224,12 +224,45 @@ export const BRAND_FONT_SLUGS = ["fraunces", "figtree"] as const satisfies reado
 export type BrandFontSlug = (typeof BRAND_FONT_SLUGS)[number];
 
 /**
- * Métricas de la fuente de sustitución, medidas sobre los ficheros reales
- * (fontTools: hhea/OS/2 + ancho medio en Chrome) para que `font-display: swap`
- * no mueva el layout:
- * - `size-adjust` = ancho de la webfont ÷ ancho del fallback;
+ * Métricas de la webfont en fracción del em (`hhea`, que en estas familias
+ * coincide con `OS/2` typo y con `USE_TYPO_METRICS` activo):
+ * - Fraunces: upem 2000, ascender 1956, descender ‑510, lineGap 0;
+ * - Figtree: upem 1000, ascender 950, descender ‑250, lineGap 0.
+ */
+export const BRAND_WEBFONT_METRICS: Record<
+  BrandFontSlug,
+  { ascent: number; descent: number; lineGap: number }
+> = {
+  fraunces: { ascent: 1956 / 2000, descent: 510 / 2000, lineGap: 0 },
+  figtree: { ascent: 950 / 1000, descent: 250 / 1000, lineGap: 0 },
+};
+
+/**
+ * Ancho de la webfont ÷ ancho de la cara local, medido en Chromium sobre el
+ * texto real de la landing (titulares a su tamaño efectivo, con
+ * `font-optical-sizing: auto` y su `letter-spacing`):
+ * - Fraunces pesa un 7.25 % más que Georgia Regular en los mismos cuerpos
+ *   (~40 px el `h1`, 28/24/18/16 px el resto);
+ * - Figtree y Arial empatan (±0.2 %) en los cuerpos de 14–18 px.
+ *
+ * Se mide sobre los textos y cuerpos reales, no sobre una muestra a 400 px:
+ * Fraunces es variable en el eje `opsz` y a tamaños grandes se estrecha, así
+ * que extrapolar desde una única muestra da una base falsa.
+ */
+export const BRAND_FALLBACK_WIDTH_RATIO: Record<BrandFontSlug, number> = {
+  fraunces: 1.0725,
+  figtree: 1,
+};
+
+/**
+ * Métricas de la fuente de sustitución para que `font-display: swap` no mueva
+ * el layout:
+ * - `size-adjust` = ancho de la webfont ÷ ancho de la cara local;
  * - `ascent/descent-override` = métrica de la webfont ÷ `size-adjust`
  *   (el override se aplica sobre el em ya escalado).
+ *
+ * Todo se deriva de `BRAND_WEBFONT_METRICS` y `BRAND_FALLBACK_WIDTH_RATIO`:
+ * una sola fuente de verdad, sin porcentajes copiados a mano.
  */
 export interface ThemeFontFallback {
   slug: FontSlug;
@@ -237,31 +270,54 @@ export interface ThemeFontFallback {
   family: string;
   /** Candidatas `local()`, en orden de preferencia. */
   localSources: readonly string[];
+  /** Ancho de la webfont ÷ ancho de la cara local. */
+  sizeAdjustRatio: number;
   sizeAdjust: string;
   ascentOverride: string;
   descentOverride: string;
   lineGapOverride: string;
 }
 
+function percentOfEm(value: number): string {
+  return `${Math.round(value * 100 * 100) / 100}%`;
+}
+
+function fallbackMetrics(
+  slug: BrandFontSlug,
+  family: string,
+  localSources: readonly string[],
+): ThemeFontFallback {
+  const metrics = BRAND_WEBFONT_METRICS[slug];
+  const ratio = BRAND_FALLBACK_WIDTH_RATIO[slug];
+  return {
+    slug,
+    family,
+    localSources,
+    sizeAdjustRatio: ratio,
+    sizeAdjust: percentOfEm(ratio),
+    ascentOverride: percentOfEm(metrics.ascent / ratio),
+    descentOverride: percentOfEm(metrics.descent / ratio),
+    lineGapOverride: percentOfEm(metrics.lineGap / ratio),
+  };
+}
+
+/**
+ * `local()` solo casa con nombres de familia instalados de verdad: los
+ * genéricos (`Serif`, `sans-serif`) y los alias inexistentes (`Georgia Pro`)
+ * no resuelven y dejan la cara sin `src`, es decir, sin ajuste métrico.
+ *
+ * Georgia (Windows y macOS) se resuelve aquí como **Georgia Regular**: la cara
+ * que declara este `@font-face` no lleva `font-weight`, así que cubre 400 y es
+ * la que se usa también en los titulares de 600. La cadena de Arial es
+ * métricamente coherente (Arial, Helvetica Neue y Helvetica comparten anchos).
+ */
 export const THEME_FONT_FALLBACKS: Record<BrandFontSlug, ThemeFontFallback> = {
-  fraunces: {
-    slug: "fraunces",
-    family: "Fraunces Fallback",
-    localSources: ["Georgia", "Georgia Pro", "Serif"],
-    sizeAdjust: "99%",
-    ascentOverride: "98.79%",
-    descentOverride: "25.76%",
-    lineGapOverride: "0%",
-  },
-  figtree: {
-    slug: "figtree",
-    family: "Figtree Fallback",
-    localSources: ["Arial", "Helvetica Neue", "Helvetica"],
-    sizeAdjust: "97.5%",
-    ascentOverride: "97.44%",
-    descentOverride: "25.64%",
-    lineGapOverride: "0%",
-  },
+  fraunces: fallbackMetrics("fraunces", "Fraunces Fallback", ["Georgia"]),
+  figtree: fallbackMetrics("figtree", "Figtree Fallback", [
+    "Arial",
+    "Helvetica Neue",
+    "Helvetica",
+  ]),
 };
 
 /** `@font-face` de sustitución con métricas ajustadas (sin descarga). */
