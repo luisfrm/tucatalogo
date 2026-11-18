@@ -19,6 +19,18 @@ export const SURFACE_ATTRIBUTE = "data-surface";
 
 const UNSAFE_CSS_PATTERN = /[<>]/;
 
+/**
+ * Tokens fuera del contrato de 31 claves (`--font-display`, degradados,
+ * sombras…). Canal **aditivo**: no toca `THEME_TOKEN_KEYS` ni los 5 temas de
+ * tienda, así que solo lo usan las superficies que lo piden explícitamente.
+ */
+export type ExtraVars = Readonly<Record<string, string>>;
+
+/** Nombre de custom property: `--algo-en-kebab-case`. */
+const CUSTOM_PROPERTY_PATTERN = /^--[a-z0-9-]+$/;
+/** Un valor extra no puede cerrar la declaración ni abrir un bloque. */
+const UNSAFE_EXTRA_VALUE_PATTERN = /[<>;{}]/;
+
 export function tokensToCssVariables(tokens: ThemeTokens): string {
   return THEME_TOKEN_KEYS.map((key) => {
     const value = tokens[key];
@@ -29,6 +41,28 @@ export function tokensToCssVariables(tokens: ThemeTokens): string {
     }
     return `  ${THEME_TOKEN_CSS_VARS[key]}: ${value};`;
   }).join("\n");
+}
+
+/** Serializa los tokens extra con el mismo criterio defensivo que el contrato. */
+export function extraVarsToCss(extraVars?: ExtraVars): string {
+  if (!extraVars) {
+    return "";
+  }
+  const entries = Object.entries(extraVars);
+  if (entries.length === 0) {
+    return "";
+  }
+  return entries
+    .map(([name, value]) => {
+      if (!CUSTOM_PROPERTY_PATTERN.test(name)) {
+        throw new Error(`Token extra con nombre inválido: ${name}`);
+      }
+      if (UNSAFE_EXTRA_VALUE_PATTERN.test(value)) {
+        throw new Error(`Token extra ${name} contiene caracteres no permitidos.`);
+      }
+      return `  ${name}: ${value};`;
+    })
+    .join("\n");
 }
 
 /** Selector del bloque de tokens: claro por defecto, oscuro por atributo. */
@@ -61,8 +95,11 @@ export function renderTokensCss(
   selector: string,
   tokens: ThemeTokens,
   mode: ColorMode,
+  extraVars?: ExtraVars,
 ): string {
-  return `${selector} {\n  color-scheme: ${mode};\n${tokensToCssVariables(tokens)}\n}`;
+  const declared = tokensToCssVariables(tokens);
+  const extra = extraVarsToCss(extraVars);
+  return `${selector} {\n  color-scheme: ${mode};\n${declared}${extra ? `\n${extra}` : ""}\n}`;
 }
 
 export function renderThemeCss(
@@ -167,6 +204,11 @@ export interface AdminRenderInput {
   mode?: ColorMode;
   /** Color de la tienda: obligatorio en `panel-admin`. */
   primaryColor?: string;
+  /**
+   * Tokens aditivos de la superficie (`--font-display`, degradados…).
+   * No forman parte del contrato de 31 claves y ninguna otra superficie los ve.
+   */
+  extraVars?: ExtraVars;
 }
 
 /** CSS de una superficie de administración (panel, console, commercial). */
@@ -176,7 +218,12 @@ export function renderAdminCss(input: AdminRenderInput): string {
     mode,
     primaryColor: input.primaryColor,
   });
-  return renderTokensCss(surfaceSelector(input.surface, mode), tokens, mode);
+  return renderTokensCss(
+    surfaceSelector(input.surface, mode),
+    tokens,
+    mode,
+    input.extraVars,
+  );
 }
 
 export function renderAdminStyleTag(

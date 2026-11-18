@@ -210,6 +210,120 @@ export function renderFontFaceStyleTag(
   return `<style data-fonts="self-hosted">${renderFontFaceCss(options)}</style>`;
 }
 
+/* ------------------------------------------------------------------ *
+ * Identidad de marca compartida (commercial + console)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Par tipográfico de las superficies de marca: Fraunces (display/variable)
+ * y Figtree (UI humanista). Es el mismo par que usa el tema Rosé de las
+ * tiendas, así la landing y el storefront no cambian de voz.
+ */
+export const BRAND_FONT_SLUGS = ["fraunces", "figtree"] as const satisfies readonly FontSlug[];
+
+export type BrandFontSlug = (typeof BRAND_FONT_SLUGS)[number];
+
+/**
+ * Métricas de la fuente de sustitución, medidas sobre los ficheros reales
+ * (fontTools: hhea/OS/2 + ancho medio en Chrome) para que `font-display: swap`
+ * no mueva el layout:
+ * - `size-adjust` = ancho de la webfont ÷ ancho del fallback;
+ * - `ascent/descent-override` = métrica de la webfont ÷ `size-adjust`
+ *   (el override se aplica sobre el em ya escalado).
+ */
+export interface ThemeFontFallback {
+  slug: FontSlug;
+  /** Nombre con el que se registra la cara de sustitución. */
+  family: string;
+  /** Candidatas `local()`, en orden de preferencia. */
+  localSources: readonly string[];
+  sizeAdjust: string;
+  ascentOverride: string;
+  descentOverride: string;
+  lineGapOverride: string;
+}
+
+export const THEME_FONT_FALLBACKS: Record<BrandFontSlug, ThemeFontFallback> = {
+  fraunces: {
+    slug: "fraunces",
+    family: "Fraunces Fallback",
+    localSources: ["Georgia", "Georgia Pro", "Serif"],
+    sizeAdjust: "99%",
+    ascentOverride: "98.79%",
+    descentOverride: "25.76%",
+    lineGapOverride: "0%",
+  },
+  figtree: {
+    slug: "figtree",
+    family: "Figtree Fallback",
+    localSources: ["Arial", "Helvetica Neue", "Helvetica"],
+    sizeAdjust: "97.5%",
+    ascentOverride: "97.44%",
+    descentOverride: "25.64%",
+    lineGapOverride: "0%",
+  },
+};
+
+/** `@font-face` de sustitución con métricas ajustadas (sin descarga). */
+export function renderFallbackFontFaceCss(
+  families: readonly BrandFontSlug[] = BRAND_FONT_SLUGS,
+): string {
+  return families
+    .map((slug) => {
+      const fallback = THEME_FONT_FALLBACKS[slug];
+      const local = fallback.localSources.map((name) => `local("${name}")`).join(", ");
+      return [
+        "@font-face {",
+        `  font-family: "${fallback.family}";`,
+        `  src: ${local};`,
+        `  size-adjust: ${fallback.sizeAdjust};`,
+        `  ascent-override: ${fallback.ascentOverride};`,
+        `  descent-override: ${fallback.descentOverride};`,
+        `  line-gap-override: ${fallback.lineGapOverride};`,
+        "}",
+      ].join("\n");
+    })
+    .join("\n\n");
+}
+
+/**
+ * `@font-face` de la marca: las dos familias reales (self-hosted, latin) más
+ * sus sustituciones ajustadas. Un único bloque para commercial y console.
+ */
+export function renderBrandFontFaceCss(
+  options: RenderFontFaceOptions = {},
+): string {
+  return `${renderFontFaceCss({
+    ...options,
+    families: options.families ?? BRAND_FONT_SLUGS,
+  })}\n\n${renderFallbackFontFaceCss()}`;
+}
+
+/** `<link rel="preload">` de las familias indicadas (una por familia). */
+export function fontPreloadLinks(
+  families: readonly BrandFontSlug[] = BRAND_FONT_SLUGS,
+  basePath: string = FONT_BASE_PATH,
+): string {
+  return fontPreloadHrefs(families, basePath)
+    .map(
+      (href) =>
+        `<link rel="preload" href="${href}" as="font" type="font/woff2" crossorigin="anonymous" />`,
+    )
+    .join("\n");
+}
+
+/**
+ * Rutas públicas de precarga, para que las apps React puedan emitir `<link>`
+ * reales en el `<head>` en lugar de HTML en crudo.
+ */
+export function fontPreloadHrefs(
+  families: readonly BrandFontSlug[] = BRAND_FONT_SLUGS,
+  basePath: string = FONT_BASE_PATH,
+): string[] {
+  const base = basePath.replace(/\/+$/, "");
+  return families.map((slug) => `${base}/${THEME_FONTS[slug].file}`);
+}
+
 /**
  * Preload de las dos familias del tema (variable: un fichero por familia).
  * PLAN §9.6: solo lo que se usa en el primer viewport.

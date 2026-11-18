@@ -28,7 +28,9 @@ export type { ResolveThemeInput } from "./themes/index";
 export {
   ADMIN_SURFACES,
   adminTheme,
+  commercialExtraVars,
   commercialTheme,
+  consoleExtraVars,
   consoleTheme,
   resolveAdminTheme,
 } from "./themes/admin";
@@ -68,18 +70,26 @@ export type {
 } from "./color";
 
 export {
+  BRAND_FONT_SLUGS,
   FONT_BASE_PATH,
   LATIN_UNICODE_RANGE,
   THEME_FONTS,
   THEME_FONT_SLUGS,
+  THEME_FONT_FALLBACKS,
+  fontPreloadHrefs,
+  fontPreloadLinks,
+  renderBrandFontFaceCss,
+  renderFallbackFontFaceCss,
   renderFontFaceCss,
   renderFontFaceStyleTag,
   themeFontFiles,
   themePreloadLinks,
 } from "./fonts";
 export type {
+  BrandFontSlug,
   FontSlug,
   RenderFontFaceOptions,
+  ThemeFontFallback,
   ThemeFontFile,
 } from "./fonts";
 
@@ -87,6 +97,7 @@ export {
   COLOR_MODE_ATTRIBUTE,
   SURFACE_ATTRIBUTE,
   THEME_ATTRIBUTE,
+  extraVarsToCss,
   renderAdminCss,
   renderAdminStyleTag,
   renderThemeBootstrap,
@@ -103,6 +114,7 @@ export {
 } from "./injector";
 export type {
   AdminRenderInput,
+  ExtraVars,
   RenderCssOptions,
   ThemeBootstrap,
   ThemeRenderInput,

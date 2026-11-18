@@ -159,8 +159,8 @@ describe("CSS de administración", () => {
     expect(consoleCss).toContain("color-scheme: dark");
 
     const commercial = renderAdminCss({ surface: "commercial" });
-    expect(commercial).toContain("--color-primary: #8E5F67;");
-    expect(commercial).toContain("--color-accent: #C09299;");
+    expect(commercial).toContain("--color-primary: #A40040;");
+    expect(commercial).toContain("--color-accent: #DD6F23;");
     expect(commercialTheme("light").onPrimary).toBe("#FFFFFF");
   });
 
@@ -168,5 +168,57 @@ describe("CSS de administración", () => {
     expect(() => renderAdminCss({ surface: "panel-admin" })).toThrow(
       InvalidColorError,
     );
+  });
+
+  it("extraVars es aditivo: sin pasarlo, ninguna superficie lo emite", () => {
+    for (const surface of ["panel-admin", "console", "commercial"] as const) {
+      const css = renderAdminCss({
+        surface,
+        ...(surface === "panel-admin" ? { primaryColor: "#C09299" } : {}),
+      });
+      expect(css, surface).not.toContain("--font-display");
+      expect(css, surface).not.toContain("--gradient-");
+    }
+  });
+
+  it("extraVars emite los tokens aditivos dentro del bloque de su superficie", () => {
+    const css = renderAdminCss({
+      surface: "commercial",
+      extraVars: {
+        "--font-display": '"Fraunces", Georgia, serif',
+        "--gradient-hero": "linear-gradient(165deg, #FFFCFA 0%, #FCF4EE 100%)",
+      },
+    });
+    expect(css).toContain('[data-surface="commercial"]');
+    expect(css).toContain('--font-display: "Fraunces", Georgia, serif;');
+    expect(css).toContain(
+      "--gradient-hero: linear-gradient(165deg, #FFFCFA 0%, #FCF4EE 100%);",
+    );
+    // El contrato sigue completo y con color-scheme en el mismo bloque.
+    expect(css).toContain("color-scheme: light");
+    for (const key of THEME_TOKEN_KEYS) {
+      expect(css, key).toContain(THEME_TOKEN_CSS_VARS[key]);
+    }
+  });
+
+  it("extraVars rechaza nombres y valores que romperían el <style>", () => {
+    expect(() =>
+      renderAdminCss({
+        surface: "commercial",
+        extraVars: { "font-display": "serif" },
+      }),
+    ).toThrow(/nombre inválido/);
+    expect(() =>
+      renderAdminCss({
+        surface: "commercial",
+        extraVars: { "--gradient-hero": "red;} body{display:none" },
+      }),
+    ).toThrow(/no permitidos/);
+    expect(() =>
+      renderAdminCss({
+        surface: "commercial",
+        extraVars: { "--gradient-hero": "<script>" },
+      }),
+    ).toThrow(/no permitidos/);
   });
 });
