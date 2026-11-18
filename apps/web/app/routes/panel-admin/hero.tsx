@@ -408,7 +408,7 @@ export default function PanelHero({ loaderData }: Route.ComponentProps) {
                           name="title"
                           defaultValue={slide.title ?? ""}
                           maxLength={120}
-                          className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+                          className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
                         />
                       </Field>
                       <Field id={`hero-subtitle-${slide.id}`} label="Subtítulo">
@@ -417,7 +417,7 @@ export default function PanelHero({ loaderData }: Route.ComponentProps) {
                           name="subtitle"
                           defaultValue={slide.subtitle ?? ""}
                           maxLength={200}
-                          className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+                          className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
                         />
                       </Field>
                       <Field id={`hero-cta-label-${slide.id}`} label="Texto del botón">
@@ -426,7 +426,7 @@ export default function PanelHero({ loaderData }: Route.ComponentProps) {
                           name="ctaLabel"
                           defaultValue={slide.ctaLabel ?? ""}
                           maxLength={40}
-                          className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+                          className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
                         />
                       </Field>
                       <Field
@@ -439,7 +439,7 @@ export default function PanelHero({ loaderData }: Route.ComponentProps) {
                           name="ctaUrl"
                           defaultValue={slide.ctaUrl ?? ""}
                           maxLength={500}
-                          className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+                          className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
                         />
                       </Field>
                     </div>

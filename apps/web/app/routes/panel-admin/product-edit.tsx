@@ -346,7 +346,7 @@ function ImageRow({
             defaultValue={image.alt}
             maxLength={180}
             required
-            className="block h-9 w-full rounded-[var(--radius-sm)] border-[length:var(--border-width)] border-border-strong bg-surface px-2 text-xs focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            className="block h-9 w-full rounded-[var(--radius-sm)] border-[length:var(--border-width)] border-border-strong bg-surface px-2 text-base sm:text-xs focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           />
         </label>
         <Button type="submit" variant="ghost" size="sm" disabled={pending}>

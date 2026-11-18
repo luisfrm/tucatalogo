@@ -171,7 +171,7 @@ export function SettingsForm({
             name="currency"
             value={currency}
             onChange={(event) => setCurrency(event.currentTarget.value as Currency)}
-            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           >
             {(Object.keys(CURRENCY_NOTES) as Currency[]).map((option) => (
               <option key={option} value={option}>
@@ -196,7 +196,7 @@ export function SettingsForm({
             onChange={(event) =>
               setColorModeDefault(event.currentTarget.value === "dark" ? "dark" : "light")
             }
-            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           >
             <option value="light">Claro</option>
             <option value="dark">Oscuro</option>
@@ -308,7 +308,7 @@ export function SettingsForm({
             maxLength={300}
             rows={3}
             onChange={(event) => setWhatsappTemplate(event.currentTarget.value)}
-            className="block w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 py-2 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            className="block w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 py-2 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           />
         </Field>
       </div>

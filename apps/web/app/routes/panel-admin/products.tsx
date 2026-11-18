@@ -234,7 +234,7 @@ export default function PanelProducts({ loaderData }: Route.ComponentProps) {
               type="search"
               defaultValue={query.q}
               placeholder="Nombre o identificador"
-              className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+              className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
             />
           </Field>
           <Field id="products-category" label="Categoría">
@@ -242,7 +242,7 @@ export default function PanelProducts({ loaderData }: Route.ComponentProps) {
               id="products-category"
               name="category"
               defaultValue={query.category}
-              className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+              className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
             >
               <option value="">Todas</option>
               {categories.map((category) => (
@@ -257,7 +257,7 @@ export default function PanelProducts({ loaderData }: Route.ComponentProps) {
               id="products-status"
               name="status"
               defaultValue={query.status}
-              className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+              className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
             >
               <option value="all">Todos</option>
               <option value="active">Visibles</option>

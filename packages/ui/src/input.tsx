@@ -26,8 +26,10 @@ export const inputVariants = cva(
   {
     variants: {
       size: {
-        sm: "h-11 px-3 text-sm sm:h-9",
-        md: "h-11 px-3 text-sm sm:h-10",
+        // 16px en móvil: iOS hace zoom al enfocar un control con `font-size`
+        // menor de 16px. Desde 640px vuelve a la escala de escritorio.
+        sm: "h-11 px-3 text-base sm:h-9 sm:text-sm",
+        md: "h-11 px-3 text-base sm:h-10 sm:text-sm",
         lg: "h-12 px-4 text-base",
       },
     },

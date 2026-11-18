@@ -1,0 +1,22 @@
+/*
+ * Red de seguridad para el zoom automático de iOS.
+ *
+ * Safari móvil amplía la página al enfocar un control cuyo `font-size` es
+ * menor de 16px. Los componentes de `@tucatalogo/ui` ya suben a 16px en móvil;
+ * esta regla cubre los controles nativos que no pasan por el componente
+ * (buscadores, selects y textareas de web, console y commercial).
+ *
+ * Solo aplica por debajo de 640px: en escritorio la escala no cambia. Las
+ * utilidades `text-*` viven en la capa `utilities`, así que un tamaño explícito
+ * en el markup sigue ganando a esta base; por eso los controles con tamaño
+ * propio usan `text-base sm:text-<escala>` en lugar de depender de esta regla.
+ */
+@layer base {
+  @media (max-width: 639.98px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+}

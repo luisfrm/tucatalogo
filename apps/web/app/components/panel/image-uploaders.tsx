@@ -154,7 +154,7 @@ export function ProductImageUploader({
             maxLength={180}
             disabled={busy}
             onChange={(event) => setAlt(event.currentTarget.value)}
-            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           />
         </Field>
       </div>
@@ -462,7 +462,7 @@ export function HeroCreateForm({
             maxLength={120}
             disabled={busy}
             onChange={(event) => setTitle(event.currentTarget.value)}
-            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           />
         </Field>
         <Field id="hero-subtitle" label="Subtítulo" hint="Máximo 200 caracteres.">
@@ -473,7 +473,7 @@ export function HeroCreateForm({
             maxLength={200}
             disabled={busy}
             onChange={(event) => setSubtitle(event.currentTarget.value)}
-            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           />
         </Field>
         <Field id="hero-cta-label" label="Texto del botón" hint="Si lo dejas vacío, no hay botón.">
@@ -484,7 +484,7 @@ export function HeroCreateForm({
             maxLength={40}
             disabled={busy}
             onChange={(event) => setCtaLabel(event.currentTarget.value)}
-            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           />
         </Field>
         <Field
@@ -499,7 +499,7 @@ export function HeroCreateForm({
             maxLength={500}
             disabled={busy}
             onChange={(event) => setCtaUrl(event.currentTarget.value)}
-            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           />
         </Field>
       </div>

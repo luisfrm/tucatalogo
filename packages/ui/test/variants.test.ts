@@ -75,4 +75,17 @@ describe("Input", () => {
     expect(inputVariants()).toContain("h-11");
     expect(inputVariants({ size: "lg" })).toContain("h-12");
   });
+
+  it("mantiene 16px en móvil para evitar el zoom de iOS", () => {
+    for (const size of ["sm", "md"] as const) {
+      const classes = inputVariants({ size });
+      expect(classes, size).toContain("text-base");
+      expect(classes, size).toContain("sm:text-sm");
+    }
+
+    // `lg` ya vive en 16px: no debe arrastrar un salto en `sm:`.
+    const large = inputVariants({ size: "lg" });
+    expect(large).toContain("text-base");
+    expect(large).not.toContain("sm:text-sm");
+  });
 });
