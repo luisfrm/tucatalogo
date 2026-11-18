@@ -18,7 +18,7 @@ describe("A1: hosts de los workers", () => {
     const api = loadWorkerConfig("api");
     const withRoutes: WorkerConfig = {
       ...api,
-      routes: [{ pattern: "api.tucatalogo.luisrivas.site/*" }],
+      routes: [{ pattern: "api.tucatalogo.live/*" }],
     };
 
     expect(checkWorkerConfig("api", withRoutes)).toContain(
@@ -29,7 +29,7 @@ describe("A1: hosts de los workers", () => {
       ...api,
       env: {
         ...api.env,
-        dev: { ...api.env?.dev, routes: [{ pattern: "api-dev.tucatalogo.luisrivas.site/*" }] },
+        dev: { ...api.env?.dev, routes: [{ pattern: "api-dev.tucatalogo.live/*" }] },
       },
     };
 
@@ -121,39 +121,36 @@ describe("B9: Turnstile en commercial", () => {
   });
 });
 
-describe("routing: tiendas en la subzona tucatalogo.luisrivas.site", () => {
-  const SUBZONE = "tucatalogo.luisrivas.site";
+describe("routing: tiendas en la subzona tucatalogo.live", () => {
+  const DOMAIN = "tucatalogo.live";
 
   it("web enruta la subzona de tiendas y resuelve contra ella", () => {
     const web = loadWorkerConfig("web");
 
-    expect(web.env?.prod?.routes).toEqual([
-      { pattern: `*.${SUBZONE}/*`, zone_name: "luisrivas.site" },
-    ]);
-    expect(web.env?.prod?.vars?.APP_DOMAIN).toBe(SUBZONE);
+    expect(web.env?.prod?.routes).toEqual([{ pattern: `*.${DOMAIN}/*`, zone_name: DOMAIN }]);
+    expect(web.env?.prod?.vars?.APP_DOMAIN).toBe(DOMAIN);
   });
 
-  it("commercial y console siguen en hosts exactos del dominio padre", () => {
+  it("commercial va en el apex y console en su host exacto", () => {
     const commercial = loadWorkerConfig("commercial");
     const consoleApp = loadWorkerConfig("console");
 
-    // Sin comodín en `luisrivas.site`: cada frontend es un host exacto.
-    expect(commercial.env?.prod?.routes).toEqual([
-      { pattern: `${SUBZONE}/*`, zone_name: "luisrivas.site" },
-    ]);
+    // Todo dentro de la misma zona: apex para commercial, host exacto para console.
+    expect(commercial.env?.prod?.routes).toEqual([{ pattern: `${DOMAIN}/*`, zone_name: DOMAIN }]);
+    expect(commercial.env?.prod?.vars?.APP_DOMAIN).toBe(DOMAIN);
     expect(consoleApp.env?.prod?.routes).toEqual([
-      { pattern: "console-tucatalogo.luisrivas.site/*", zone_name: "luisrivas.site" },
+      { pattern: `console.${DOMAIN}/*`, zone_name: DOMAIN },
     ]);
+    expect(consoleApp.env?.prod?.vars?.APP_DOMAIN).toBe(DOMAIN);
   });
 
-  it("el api construye los enlaces de tienda contra la subzona", () => {
+  it("el api construye los enlaces contra el dominio nuevo", () => {
     const api = loadWorkerConfig("api");
 
-    expect(api.env?.prod?.vars?.APP_DOMAIN).toBe(SUBZONE);
-    expect(api.env?.prod?.vars?.STORE_ORIGIN_TEMPLATE).toBe(`https://{slug}.${SUBZONE}`);
-    // El console no vive en la subzona: se queda en el dominio padre, host exacto.
-    expect(api.env?.prod?.vars?.CONSOLE_ORIGIN).toBe(
-      "https://console-tucatalogo.luisrivas.site",
-    );
+    expect(api.env?.prod?.vars?.APP_DOMAIN).toBe(DOMAIN);
+    expect(api.env?.prod?.vars?.STORE_ORIGIN_TEMPLATE).toBe(`https://{slug}.${DOMAIN}`);
+    expect(api.env?.prod?.vars?.CONSOLE_ORIGIN).toBe(`https://console.${DOMAIN}`);
+    expect(api.env?.prod?.vars?.MEDIA_BASE_URL).toBe(`https://bucket.${DOMAIN}`);
+    expect(api.env?.prod?.vars?.EMAIL_FROM).toBe("TuCatálogo <no-reply@tucatalogo.live>");
   });
 });

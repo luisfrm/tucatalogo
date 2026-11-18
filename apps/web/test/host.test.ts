@@ -3,28 +3,30 @@ import { describe, expect, it } from "vitest";
 import { resolveStoreSlug } from "../app/lib/host";
 
 describe("resolución de host del storefront", () => {
-  const SUBZONE = "tucatalogo.luisrivas.site";
+  const SUBZONE = "tucatalogo.live";
 
   it("extrae el slug del subdominio de la subzona de tiendas", () => {
-    expect(resolveStoreSlug("mi-tienda.tucatalogo.luisrivas.site", SUBZONE)).toEqual({
+    expect(resolveStoreSlug("mi-tienda.tucatalogo.live", SUBZONE)).toEqual({
       slug: "mi-tienda",
       reason: "ok",
       siteId: null,
     });
   });
 
-  it("no trata la raíz ni www de la subzona como tienda", () => {
+  it("no trata el apex ni www como tienda", () => {
     expect(resolveStoreSlug(SUBZONE, SUBZONE).reason).toBe("root");
     expect(resolveStoreSlug(`www.${SUBZONE}`, SUBZONE).reason).toBe("root");
   });
 
-  it("rechaza hosts reservados, anidados y de otro dominio", () => {
+  it("rechaza los hosts exactos, reservados y anidados", () => {
+    // `console` y `bucket` comparten zona con las tiendas: hay ruta exacta, pero
+    // `web` los rechaza igual (defensa en profundidad).
+    expect(resolveStoreSlug(`console.${SUBZONE}`, SUBZONE).reason).toBe("reserved");
+    expect(resolveStoreSlug(`bucket.${SUBZONE}`, SUBZONE).reason).toBe("reserved");
     expect(resolveStoreSlug(`admin.${SUBZONE}`, SUBZONE).reason).toBe("reserved");
     expect(resolveStoreSlug(`panel.${SUBZONE}`, SUBZONE).reason).toBe("reserved");
-    // El dominio padre no es una tienda: `mi-tienda.luisrivas.site` no existe
-    // por diseño (no hay comodín en luisrivas.site).
+    // El dominio anterior ya no es nuestro: no resuelve tienda.
     expect(resolveStoreSlug("mi-tienda.luisrivas.site", SUBZONE).reason).toBe("invalid");
-    expect(resolveStoreSlug("console-tucatalogo.luisrivas.site", SUBZONE).reason).toBe("invalid");
     expect(resolveStoreSlug(`a.b.${SUBZONE}`, SUBZONE).reason).toBe("invalid");
     expect(resolveStoreSlug("otro-dominio.com", SUBZONE).reason).toBe("invalid");
     expect(resolveStoreSlug(`Bad_Slug.${SUBZONE}`, SUBZONE).reason).toBe("invalid");

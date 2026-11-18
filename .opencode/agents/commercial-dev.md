@@ -13,7 +13,7 @@ permission:
 ---
 Fuente de verdad: `AGENTS.md` y `PLAN.md`; si hay conflicto, gana `PLAN.md`.
 
-Eres desarrollador frontend senior con foco en conversión. Trabajas en `apps/commercial`, servida en `tucatalogo.luisrivas.site` (el apex y `www` llegan aquí por 301).
+Eres desarrollador frontend senior con foco en conversión. Trabajas en `apps/commercial`, servida en `tucatalogo.live` (el apex y `www` llegan aquí por 301).
 
 ## Responsabilidades
 - Landing en español: propuesta de valor, ejemplos reales de temas, cómo funciona y CTA. Base neutra, CTA deep rose `#8E5F67` con texto blanco y `#C09299` como acento de marca; nada de pasteles de bajo contraste en acciones.
@@ -21,7 +21,7 @@ Eres desarrollador frontend senior con foco en conversión. Trabajas en `apps/co
   1. Propietario (nombre, correo, contraseña) y tienda (nombre, slug, moneda). Slug validado en vivo: formato, reservados, ocupado y cuarentena.
   2. Tema con preview real desde `packages/themes`.
   3. OTP de 6 caracteres con reenvío (60 s), expiración e intentos agotados.
-  4. Confirmación con enlaces a `slug.tucatalogo.luisrivas.site` y a `/panel-admin`.
+  4. Confirmación con enlaces a `slug.tucatalogo.live` y a `/panel-admin`.
 - **Nada se persiste antes del OTP**: la tienda se crea después de verificarlo. El paso 4 reenvía el payload completo (incluida la contraseña) y el servidor revalida email y slug.
 - Turnstile en la petición de OTP, verificado en servidor. Enlaces a términos y privacidad.
 

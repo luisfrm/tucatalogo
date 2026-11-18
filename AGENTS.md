@@ -1,23 +1,25 @@
 # TuCatálogo – Contexto del proyecto (MVP / Fase 1)
 
 SaaS multitienda de catálogos (zapatos, maquillaje, sandalias). Una cuenta = una tienda.
-Cada tienda vive en `slug.tucatalogo.luisrivas.site` con panel en `/panel-admin` y pedido por WhatsApp.
+Cada tienda vive en `slug.tucatalogo.live` con panel en `/panel-admin` y pedido por WhatsApp.
 Plan vigente y detalle de decisiones: **`PLAN.md` (v1.1)**. Los requerimientos v1.0 son baseline.
 
 ## Superficies y hosts
 
 | App | Prod | Rol |
 | --- | --- | --- |
-| `apps/commercial` | `tucatalogo.luisrivas.site` | Landing + registro multipaso |
-| `apps/console` | `console-tucatalogo.luisrivas.site` | Backoffice SaaS: tiendas, suspensión, borrado, audit |
-| `apps/web` | `*.tucatalogo.luisrivas.site` | Storefront **y** `/panel-admin` (panel del dueño) |
+| `apps/commercial` | `tucatalogo.live` | Landing + registro multipaso |
+| `apps/console` | `console.tucatalogo.live` | Backoffice SaaS: tiendas, suspensión, borrado, audit |
+| `apps/web` | `*.tucatalogo.live` | Storefront **y** `/panel-admin` (panel del dueño) |
 | `apps/api` | sin ruta pública | Hono; solo service binding |
 
 - **No existe `apps/panel`**: el panel del dueño son rutas de `apps/web`.
-- **El comodín vive solo en la subzona de tiendas.** `luisrivas.site` no tiene `*`:
-  `tucatalogo` (commercial), `console-tucatalogo` y `tucatalogo-bucket` (R2) son
-  hosts exactos del dominio padre y no se toca ningún otro registro de la zona.
-- Apex y `www` → 301 al commercial (Redirect Rules). R2: `tucatalogo-bucket.luisrivas.site`, host único.
+- **Un solo dominio propio: `tucatalogo.live`.** El **apex es el commercial**;
+  `console` y `bucket` (R2) son hosts exactos de la misma zona; `*.tucatalogo.live`
+  cubre solo las tiendas y `www` redirige 301 al apex.
+- `luisrivas.site` queda **fuera del proyecto**: solo se eliminan sus registros
+  `tucatalogo*`; el resto de esa zona no se toca.
+- Apex (commercial) y `www` → 301 a `tucatalogo.live` (Redirect Rules). R2: `bucket.tucatalogo.live`, host único.
 - Dev: `*-dev.workers.dev` + `?siteId`; sin wildcard.
 
 ## Stack
@@ -45,7 +47,7 @@ packages/config  tsconfig, eslint, tailwind
 1. commercial, console y web hablan con api **solo por service binding**. La api no tiene ruta pública.
 2. El `storeId` sale siempre de la sesión o del slug resuelto en servidor. Nunca de un parámetro del cliente. `?siteId` solo se acepta en dev/local (storefront y `/panel-admin`) como resolución de host: no es un `storeId` de confianza, en `/panel-admin` la sesión debe ser del dueño de esa tienda, y en prod se rechaza con 400 + log.
 3. El navegador **nunca** llama al API: loaders/actions y resource routes same-origin vía `packages/api-client`. Sin TanStack Query.
-4. **Dos reinos de auth**: `store_users` (dueños) y `admin_users` (console). Dos instancias Better Auth, secretos separados, cookies **host-only** con prefijo `store` / `console`. Sin `domain=.luisrivas.site`. `INIT_TOKEN` vive solo en `api`: el console lo recibe del formulario `/init` y lo reenvía por binding.
+4. **Dos reinos de auth**: `store_users` (dueños) y `admin_users` (console). Dos instancias Better Auth, secretos separados, cookies **host-only** con prefijo `store` / `console`. Sin `domain=.tucatalogo.live`. `INIT_TOKEN` vive solo en `api`: el console lo recibe del formulario `/init` y lo reenvía por binding.
 5. Una cuenta = una tienda (`store.owner_id` único). Suspender ≠ eliminar.
 6. `store.status` = `pending|active|suspended` + `suspendedBy` (`owner|admin`) + `suspendedReason`. **Sin `isActive`**. El owner solo reactiva si `suspendedBy = owner`; el console reactiva siempre.
 7. Registro: **nada se persiste antes del OTP**. `signup_intent` guarda email, hash del OTP, intentos y expiración; nunca la contraseña. Sin tienda `pending` ni purga a 24 h.

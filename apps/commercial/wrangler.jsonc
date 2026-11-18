@@ -43,8 +43,8 @@
       "preview_urls": false,
       "vars": {
         "ENVIRONMENT": "production",
-        "APP_DOMAIN": "tucatalogo.luisrivas.site",
-        "MEDIA_BASE_URL": "https://tucatalogo-bucket.luisrivas.site",
+        "APP_DOMAIN": "tucatalogo.live",
+        "MEDIA_BASE_URL": "https://bucket.tucatalogo.live",
         // B9: Turnstile real en prod. La site key es pública y vive aquí (no es
         // secreta y no va en GitHub); el TURNSTILE_SECRET_KEY es un Worker
         // secret del api, sincronizado desde un GitHub Repository secret. Sin
@@ -60,8 +60,8 @@
       ],
       "routes": [
         {
-          "pattern": "tucatalogo.luisrivas.site/*",
-          "zone_name": "luisrivas.site"
+          "pattern": "tucatalogo.live/*",
+          "zone_name": "tucatalogo.live"
         }
       ]
     }

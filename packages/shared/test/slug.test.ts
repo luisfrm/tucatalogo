@@ -5,10 +5,10 @@ import { RESERVED_SLUGS, isReservedSlug } from "../src/constants/reserved-slugs"
 
 describe("slugs", () => {
   it("contiene los reservados del plan", () => {
-    for (const slug of ["www", "api", "tucatalogo", "tucatalogo-bucket"]) {
+    for (const slug of ["www", "api", "console", "bucket", "tucatalogo", "tucatalogo-bucket"]) {
       expect(isReservedSlug(slug)).toBe(true);
     }
-    expect(RESERVED_SLUGS).toHaveLength(15);
+    expect(RESERVED_SLUGS).toHaveLength(16);
     expect(isReservedSlug("mi-tienda")).toBe(false);
   });
 

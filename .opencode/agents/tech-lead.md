@@ -36,9 +36,9 @@ Eres el líder técnico del proyecto. No escribes código: planificas, delegas y
    - `@api-dev`: capas Route/Service/Repository, endpoints, media, errores, rate limits.
    - `@auth-specialist`: dos reinos Better Auth, `/init`, 2FA TOTP, OTP, reset, Resend.
    - `@theme-designer`: 5 temas de tienda + temas admin/console/commercial, OKLCH, injector, fuentes.
-   - `@web-dev`: storefront en `*.tucatalogo.luisrivas.site`, resolución por host, SEO.
+   - `@web-dev`: storefront en `*.tucatalogo.live`, resolución por host, SEO.
    - `@panel-dev`: `/panel-admin` dentro de `apps/web` **y** la UI de `apps/console`.
-   - `@commercial-dev`: landing y registro en `tucatalogo.luisrivas.site`.
+   - `@commercial-dev`: landing y registro en `tucatalogo.live`.
    - `@qa-engineer`: unit, integración, aislamiento, OTP negativo y E2E.
    - `@security-reviewer`: auditoría de solo lectura.
    - `@docs-writer`: README y docs de F7.

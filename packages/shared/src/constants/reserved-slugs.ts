@@ -8,6 +8,7 @@ export const RESERVED_SLUGS = [
   "panel",
   "admin",
   "console",
+  "bucket",
   "app",
   "mail",
   "static",
@@ -16,6 +17,8 @@ export const RESERVED_SLUGS = [
   "cdn",
   "commercial",
   "tucatalogo",
+  // Legado del dominio anterior (`*.tucatalogo.luisrivas.site`): se mantienen
+  // reservados para que nadie registre el slug de un host que existió.
   "console-tucatalogo",
   "tucatalogo-bucket",
 ] as const;

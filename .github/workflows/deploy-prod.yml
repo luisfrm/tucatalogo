@@ -133,11 +133,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Variable del Environment `prod` (Settings → Environments → prod →
           # Environment variables), no un secreto. Es la tienda de bajo riesgo
-          # para el smoke del storefront (subzona `tucatalogo.luisrivas.site`).
+          # para el smoke del storefront (subzona `tucatalogo.live`).
           # Mientras no haya una tienda real, el fallback
-          # `demo.tucatalogo.luisrivas.site` mantiene el step vivo; en cuanto el
-          # owner cree la variable (en `prod` o a nivel de repo) su valor gana.
-          SMOKE_STORE_HOST: ${{ vars.SMOKE_STORE_HOST || 'demo.tucatalogo.luisrivas.site' }}
+          # `demo.tucatalogo.live` mantiene el step vivo; en cuanto el owner cree
+          # la variable (en `prod` o a nivel de repo) su valor gana.
+          SMOKE_STORE_HOST: ${{ vars.SMOKE_STORE_HOST || 'demo.tucatalogo.live' }}
         run: |
           set -euo pipefail
 
@@ -166,6 +166,6 @@ jobs:
             return 1
           }
 
-          smoke "https://tucatalogo.luisrivas.site/health"
-          smoke "https://console-tucatalogo.luisrivas.site/health"
+          smoke "https://tucatalogo.live/health"
+          smoke "https://console.tucatalogo.live/health"
           smoke "https://${SMOKE_STORE_HOST}/health"

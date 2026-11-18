@@ -18,7 +18,7 @@ export function toSlugDraft(input: string): string {
     .replace(/-+$/, "");
 }
 
-/** `mi-tienda` + `tucatalogo.luisrivas.site` → `mi-tienda.tucatalogo.luisrivas.site`. */
+/** `mi-tienda` + `tucatalogo.live` → `mi-tienda.tucatalogo.live`. */
 export function slugDomain(slug: string, domain: string): string {
   const clean = slug.trim().replace(/^-+|-+$/g, "");
   return `${clean.length > 0 ? clean : SLUG_FALLBACK_LABEL}.${domain}`;

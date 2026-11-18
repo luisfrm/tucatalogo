@@ -1,7 +1,7 @@
 # TuCatálogo
 
 SaaS multitienda de catálogos (zapatos, maquillaje, sandalias). **Una cuenta = una
-tienda**: se publica en `slug.tucatalogo.luisrivas.site`, el dueño la administra en
+tienda**: se publica en `slug.tucatalogo.live`, el dueño la administra en
 `/panel-admin` y el pedido llega por WhatsApp.
 
 - **Fuente de verdad del producto:** [`PLAN.md`](./PLAN.md) (v1.1).
@@ -38,12 +38,12 @@ la alcanzan por service binding (o por `API_INTERNAL_URL` en local) a través de
 | App | Prod | Dev | Local (`pnpm dev`) | Rol |
 | --- | --- | --- | --- | --- |
 | `apps/api` | `tucatalogo-api-prod` (sin ruta) | `tucatalogo-api-dev` (sin ruta) | `http://127.0.0.1:9797` | Hono. Único con bindings D1 y R2 |
-| `apps/web` | `*.tucatalogo.luisrivas.site` | `tucatalogo-web-dev` + `?siteId` | `http://localhost:5173` | Storefront por subdominio **y** `/panel-admin` |
-| `apps/commercial` | `tucatalogo.luisrivas.site` | `tucatalogo-commercial-dev` | `http://localhost:5174` | Landing y registro multipaso |
-| `apps/console` | `console-tucatalogo.luisrivas.site` | `tucatalogo-console-dev` | `http://localhost:5175` | Backoffice SaaS: tiendas, suspensión, borrado, auditoría |
+| `apps/web` | `*.tucatalogo.live` | `tucatalogo-web-dev` + `?siteId` | `http://localhost:5173` | Storefront por subdominio **y** `/panel-admin` |
+| `apps/commercial` | `tucatalogo.live` | `tucatalogo-commercial-dev` | `http://localhost:5174` | Landing y registro multipaso |
+| `apps/console` | `console.tucatalogo.live` | `tucatalogo-console-dev` | `http://localhost:5175` | Backoffice SaaS: tiendas, suspensión, borrado, auditoría |
 
 El ápice y `www` redirigen 301 al commercial con Redirect Rules (fuera de
-Workers). El bucket de R2 se sirve en `tucatalogo-bucket.luisrivas.site`.
+Workers). El bucket de R2 se sirve en `bucket.tucatalogo.live`.
 
 ### Paquetes
 
@@ -315,16 +315,14 @@ Recursos de prod ya provisionados (D1 `tucatalogo-prod`, R2
 `tucatalogo-media-prod` con custom domain activo, worker `api` desplegado con sus
 5 secrets, GitHub Environment `prod`). Lo que falta:
 
-- **DNS de la subzona de tiendas**: no existe `*` en `tucatalogo.luisrivas.site`
-  ni registros para `demo`/`console-tucatalogo`. **No hay comodín en
-  `luisrivas.site`**: allí solo viven hosts exactos y no se toca el resto de la zona.
-- **Permiso del token**: Zone `luisrivas.site` → `Workers Routes → Edit` (y
-  `Zone → Read`). Sin él no se aplican las rutas de `web`, `commercial` ni `console`
-  y el deploy se detiene en `Deploy web`.
-- **Gate F0 (wildcard vs bucket): resuelto por diseño.** El wildcard está en la
-  subzona y el bucket en el dominio padre, así que no pueden casar; el `curl` a
-  `https://tucatalogo-bucket.luisrivas.site/` queda como test de regresión
-  (responde el 404 `text/plain` de R2).
+- **DNS de `tucatalogo.live`**: faltan los registros proxied (apex, `*`, `console`,
+  `www`) y el custom domain del bucket. Sin ellos todo resuelve NXDOMAIN.
+- **Permiso del token**: la zona `tucatalogo.live` debe estar en `CLOUDFLARE_API_TOKEN`
+  (`Workers Routes → Edit` + `Zone → Read`). Sin eso no se aplican las rutas de
+  `web`, `commercial` ni `console` y el deploy se detiene en `Deploy web`.
+- **Gate F0 (wildcard vs bucket): abierto.** Con todo en una sola zona,
+  `*.tucatalogo.live` puede casar con `bucket.tucatalogo.live`; hay que revalidar
+  con `curl` y, si intercepta, añadir una ruta de negación sin script.
 - Hosts de `env.dev` y `REPLACE_ME_DEV_D1_DATABASE_ID`: dev no se usa y sigue en
   placeholders.
 - Deploy **prod-only**: `deploy-prod.yml` despliega en cada push a `master`/`main`
@@ -332,7 +330,7 @@ Recursos de prod ya provisionados (D1 `tucatalogo-prod`, R2
   Credenciales: 2 **repository secrets** (`CLOUDFLARE_API_TOKEN`,
   `CLOUDFLARE_ACCOUNT_ID`); los 5 runtime secrets y las variables
   (`TURNSTILE_SITE_KEY`, `SMOKE_STORE_HOST`) viven en el Environment `prod`.
-  `SMOKE_STORE_HOST` cae en `demo.tucatalogo.luisrivas.site` mientras no exista la variable:
+  `SMOKE_STORE_HOST` cae en `demo.tucatalogo.live` mientras no exista la variable:
   el owner debe crearla cuando tenga una tienda real de bajo riesgo.
 - Secretos de runtime del api: los 5 (`BETTER_AUTH_SECRET_STORE`,
   `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`,

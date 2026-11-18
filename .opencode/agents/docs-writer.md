@@ -15,7 +15,7 @@ Eres redactor técnico. Escribes en español, claro y verificable.
 
 ## Entregables (F7)
 - `README.md` raíz: qué es, arquitectura (4 workers, 7 paquetes, hosts y rutas), prerrequisitos, setup local, migraciones, seeds y cómo probar subdominios en local.
-- `docs/env.md`: variables y secretos por app y entorno (`local`, `dev`, `prod`), quién los define y dónde se cargan. `INIT_TOKEN` y los secretos de auth solo en `api`. `MEDIA_BASE_URL` es la única variable de media (prod `https://tucatalogo-bucket.luisrivas.site`, local `http://127.0.0.1:9797/media`, dev un único valor por entorno).
+- `docs/env.md`: variables y secretos por app y entorno (`local`, `dev`, `prod`), quién los define y dónde se cargan. `INIT_TOKEN` y los secretos de auth solo en `api`. `MEDIA_BASE_URL` es la única variable de media (prod `https://bucket.tucatalogo.live`, local `http://127.0.0.1:9797/media`, dev un único valor por entorno).
 - `docs/deploy.md`: DNS wildcard, rutas por worker, D1 y R2 con custom domain, secretos de GitHub, flujo dev → prod, rollback y migraciones.
 - `docs/runbook.md`: suspender/reactivar/eliminar una tienda a mano, reenviar OTP, depurar un 404 de tienda y rotar secretos.
 

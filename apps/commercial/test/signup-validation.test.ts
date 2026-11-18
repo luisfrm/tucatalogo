@@ -13,8 +13,8 @@ import {
 const AVAILABLE: SlugStatus = {
   kind: "available",
   slug: "mi-tienda",
-  storefront: "https://mi-tienda.tucatalogo.luisrivas.site",
-  panel: "https://mi-tienda.tucatalogo.luisrivas.site/panel-admin",
+  storefront: "https://mi-tienda.tucatalogo.live",
+  panel: "https://mi-tienda.tucatalogo.live/panel-admin",
 };
 
 const DRAFT: OwnerDraft = {

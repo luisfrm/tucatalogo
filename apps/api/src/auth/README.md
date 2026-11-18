@@ -163,8 +163,8 @@ console.use("*", requireAdminSession); // deja c.get("adminId") / adminUser (2FA
 | `EMAIL_DRIVER` | var | `memory` (local + outbox) \| `console` (solo local) \| `resend` |
 | `EMAIL_FROM` / `RESEND_FROM` | var | remitente; `RESEND_FROM` tiene prioridad |
 | `TURNSTILE_MODE` | var | `test` \| `enabled` \| `disabled` (solo local) |
-| `STORE_ORIGIN_TEMPLATE` | var | `https://{slug}.tucatalogo.luisrivas.site` |
-| `CONSOLE_ORIGIN` | var | `https://console-tucatalogo.luisrivas.site` |
+| `STORE_ORIGIN_TEMPLATE` | var | `https://{slug}.tucatalogo.live` |
+| `CONSOLE_ORIGIN` | var | `https://console.tucatalogo.live` |
 
 Sin fallback: cualquier variable ausente o modo desconocido responde `503` con
 log de error (nunca un valor por defecto).

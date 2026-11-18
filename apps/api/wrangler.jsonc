@@ -82,13 +82,13 @@
       "preview_urls": false,
       "vars": {
         "ENVIRONMENT": "production",
-        "APP_DOMAIN": "tucatalogo.luisrivas.site",
-        "MEDIA_BASE_URL": "https://tucatalogo-bucket.luisrivas.site",
+        "APP_DOMAIN": "tucatalogo.live",
+        "MEDIA_BASE_URL": "https://bucket.tucatalogo.live",
         "EMAIL_DRIVER": "resend",
-        "EMAIL_FROM": "TuCatálogo <no-reply@luisrivas.site>",
+        "EMAIL_FROM": "TuCatálogo <no-reply@tucatalogo.live>",
         "TURNSTILE_MODE": "enabled",
-        "STORE_ORIGIN_TEMPLATE": "https://{slug}.tucatalogo.luisrivas.site",
-        "CONSOLE_ORIGIN": "https://console-tucatalogo.luisrivas.site"
+        "STORE_ORIGIN_TEMPLATE": "https://{slug}.tucatalogo.live",
+        "CONSOLE_ORIGIN": "https://console.tucatalogo.live"
       },
       "d1_databases": [
         {

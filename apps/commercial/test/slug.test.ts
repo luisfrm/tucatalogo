@@ -32,18 +32,16 @@ describe("normalización del identificador de tienda", () => {
 
 describe("enlace público de la tienda", () => {
   it("compone slug + dominio", () => {
-    expect(slugDomain("mi-tienda", "tucatalogo.luisrivas.site")).toBe(
-      "mi-tienda.tucatalogo.luisrivas.site",
-    );
+    expect(slugDomain("mi-tienda", "tucatalogo.live")).toBe("mi-tienda.tucatalogo.live");
   });
 
   it("muestra un ejemplo cuando aún no hay slug", () => {
-    expect(slugDomain("", "tucatalogo.luisrivas.site")).toBe("tu-tienda.tucatalogo.luisrivas.site");
+    expect(slugDomain("", "tucatalogo.live")).toBe("tu-tienda.tucatalogo.live");
   });
 
   it("no duplica barras al construir el login del panel", () => {
-    expect(panelLoginPath("https://mi-tienda.tucatalogo.luisrivas.site/panel-admin/")).toBe(
-      "https://mi-tienda.tucatalogo.luisrivas.site/panel-admin/login",
+    expect(panelLoginPath("https://mi-tienda.tucatalogo.live/panel-admin/")).toBe(
+      "https://mi-tienda.tucatalogo.live/panel-admin/login",
     );
   });
 });

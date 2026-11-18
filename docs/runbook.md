@@ -20,7 +20,7 @@ Convenciones:
 | Migraciones | `pnpm db:migrate:local` / `wrangler d1 migrations apply <db> --remote --env <env>` |
 | Logs en vivo | `cd apps/api && pnpm exec wrangler tail tucatalogo-api-prod --env prod` |
 | Outbox local | `curl "http://127.0.0.1:9797/dev/outbox?to=<email>"` |
-| Health de frontends | `curl -s https://tucatalogo.luisrivas.site/health` |
+| Health de frontends | `curl -s https://tucatalogo.live/health` |
 
 ## 1. Rotar `INIT_TOKEN`
 
@@ -214,7 +214,7 @@ los `store.id` de D1. El listado de objetos se hace desde el dashboard de R2
 El 404 del storefront es **idéntico** para tienda inexistente, suspendida,
 eliminada o slug inválido: la respuesta no revela el motivo. Diagnóstico:
 
-1. **Host correcto.** `slug.tucatalogo.luisrivas.site` (un subdominio directo). El ápice,
+1. **Host correcto.** `slug.tucatalogo.live` (un subdominio directo). El ápice,
    `www`, subdominios anidados y hosts ajenos no son tiendas.
 2. **Slug reservado.** Lista canónica en
    `packages/shared/src/constants/reserved-slugs.ts` (`www`, `api`, `panel`,
@@ -260,7 +260,7 @@ eliminada o slug inválido: la respuesta no revela el motivo. Diagnóstico:
 2. Prod: las URLs se construyen solo con `MEDIA_BASE_URL`:
 
    ```bash
-   curl -sI "https://tucatalogo-bucket.luisrivas.site/stores/<storeId>/products/<id>/<uuid>-full.webp"
+   curl -sI "https://bucket.tucatalogo.live/stores/<storeId>/products/<id>/<uuid>-full.webp"
    ```
 
 3. Si la app devuelve `503 MEDIA_BASE_URL_MISSING`: la variable falta o está mal

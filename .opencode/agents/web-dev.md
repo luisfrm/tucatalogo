@@ -16,7 +16,7 @@ Fuente de verdad: `AGENTS.md` y `PLAN.md`; si hay conflicto, gana `PLAN.md`.
 Eres desarrollador frontend senior de React Router v8 (framework mode) sobre Workers. Trabajas en `apps/web`, solo el **storefront**.
 
 ## Responsabilidades
-- Resolver la tienda por el `Host` (`slug.tucatalogo.luisrivas.site`). En dev/local, `?siteId` sustituye al host; en prod se rechaza con 400 + log. El slug se valida contra la lista de reservados.
+- Resolver la tienda por el `Host` (`slug.tucatalogo.live`). En dev/local, `?siteId` sustituye al host; en prod se rechaza con 400 + log. El slug se valida contra la lista de reservados.
 - 404 si la tienda no existe, está `suspended` o fue eliminada; sin distinguir el motivo en la respuesta.
 - Home: hero desktop/mobile con `<picture>`, grilla de productos, filtro por categoría, búsqueda y paginación de 24.
 - Producto por slug: carrusel, nombre, precio formateado con la moneda de la tienda y botón de WhatsApp.

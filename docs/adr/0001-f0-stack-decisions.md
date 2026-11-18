@@ -54,7 +54,7 @@
 ## Pendiente
 
 - Gate F0 de hosts: **resuelto por diseño**. El wildcard vive solo en la subzona
-  (`*.tucatalogo.luisrivas.site`) y el bucket en el dominio padre
-  (`tucatalogo-bucket.luisrivas.site`), así que no pueden casar. La comprobación
+  (`*.tucatalogo.live`) y el bucket en el dominio padre
+  (`bucket.tucatalogo.live`), así que no pueden casar. La comprobación
   con `curl` se mantiene como test de regresión.
 - Sustituir placeholders de D1/R2 y hosts de `env.dev` al crear los recursos.

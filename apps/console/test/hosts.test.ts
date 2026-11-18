@@ -4,10 +4,10 @@ import { getSlugRejectionReason, PROD_HOSTS } from "@tucatalogo/shared";
 
 describe("configuración del console", () => {
   it("usa el host exacto de producción", () => {
-    expect(PROD_HOSTS.console).toBe("console-tucatalogo.luisrivas.site");
+    expect(PROD_HOSTS.console).toBe("console.tucatalogo.live");
   });
 
-  it("su host no puede ser una tienda", () => {
-    expect(getSlugRejectionReason("console-tucatalogo")).toBe("reserved");
+  it("su label no puede ser una tienda", () => {
+    expect(getSlugRejectionReason("console")).toBe("reserved");
   });
 });

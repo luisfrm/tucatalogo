@@ -25,13 +25,13 @@ a mano con el workflow `sync-secrets`.
 
 | # | Requisito | Detalle |
 | --- | --- | --- |
-| 1 | Zona `luisrivas.site` activa | Con DNS gestionado por Cloudflare |
-| 2 | Comodín `*` **proxied en la subzona** | `*.tucatalogo.luisrivas.site` proxied, para que los hosts de tienda lleguen al worker `web`. **No se crea comodín en `luisrivas.site`**: allí solo hay hosts exactos (`tucatalogo`, `console-tucatalogo`, `tucatalogo-bucket`) y los registros de otros proyectos de la zona no se tocan |
+| 1 | Zona `tucatalogo.live` activa | Con DNS gestionado por Cloudflare. Es el único dominio del proyecto |
+| 2 | Registros proxied en `tucatalogo.live` | `@` (commercial), `*` (tiendas), `console` y `www`. El `bucket` lo crea el custom domain de R2 |
 | 3 | Plan **Workers Paid** | D1, R2 y límites de CPU del diseño (PLAN §18) |
 | 4 | Token de API | Permisos de Workers Scripts y Routes (edit), D1 (edit), R2 (edit) y Zone (read); se guarda como repository secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` |
 | 5 | Resend | Dominio de envío verificado (SPF/DKIM) y API key |
 | 6 | Turnstile | Site key y secret key para los hosts del registro |
-| 7 | GitHub: Environment `prod` + 2 repo secrets | **Repository secrets**: `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` (los usan todos los jobs con Environment). **Environment secrets** (`prod`): los 5 runtime secrets del api (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`). **Environment variables** (`prod`): `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST` (esta última cae en `demo.tucatalogo.luisrivas.site` si falta). El Environment `prod` no tiene reglas de protección ni revisores |
+| 7 | GitHub: Environment `prod` + 2 repo secrets | **Repository secrets**: `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` (los usan todos los jobs con Environment). **Environment secrets** (`prod`): los 5 runtime secrets del api (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`). **Environment variables** (`prod`): `TURNSTILE_SITE_KEY` y `SMOKE_STORE_HOST` (esta última cae en `demo.tucatalogo.live` si falta). El Environment `prod` no tiene reglas de protección ni revisores |
 | 8 | `INIT_TOKEN` | Aleatorio (32 bytes = 64 hex en local, dev y prod; valores distintos), guardado como Environment secret de `prod` y aplicado al worker con `sync-secrets` |
 | 9 | Buzón de pruebas | Para E2E de OTP y reset |
 
@@ -41,7 +41,7 @@ a mano con el workflow `sync-secrets`.
 | --- | --- | --- | --- |
 | D1 | `tucatalogo-local` (Miniflare) | `tucatalogo-dev` (no creado) | `tucatalogo-prod` = `ed32bca0-2ed9-4a07-97e5-018e8a15049f` (ENAM) |
 | R2 | `tucatalogo-local` (Miniflare) | `tucatalogo-media-dev` (no creado) | `tucatalogo-media-prod` (Standard) |
-| Host de media | `http://127.0.0.1:9797/media` | un único valor por entorno | `https://tucatalogo-bucket.luisrivas.site` (custom domain activo) |
+| Host de media | `http://127.0.0.1:9797/media` | un único valor por entorno | `https://bucket.tucatalogo.live` (custom domain activo) |
 
 Los recursos de prod ya están creados y `env.prod` de `apps/api/wrangler.jsonc` ya
 lleva el `database_id` real. Para un entorno nuevo o un reemplazo (desde
@@ -62,8 +62,8 @@ enlazan por nombre; no hay ID que copiar.
 ### Custom domain de R2
 
 Estado: **creado y sirviendo.** El bucket `tucatalogo-media-prod` tiene conectado
-`tucatalogo-bucket.luisrivas.site` (`enabled: Yes`, `ownership_status: active`,
-proxied). Verificado con `curl -sSI https://tucatalogo-bucket.luisrivas.site/`:
+`bucket.tucatalogo.live` (`enabled: Yes`, `ownership_status: active`,
+proxied). Verificado con `curl -sSI https://bucket.tucatalogo.live/`:
 responde el 404 nativo de R2 (`Content-Type: text/plain`), no el HTML del
 storefront.
 
@@ -72,29 +72,31 @@ Conectarlo en un entorno nuevo o recrearlo:
 ```bash
 cd apps/api
 pnpm exec wrangler r2 bucket domain add tucatalogo-media-prod \
-  --domain tucatalogo-bucket.luisrivas.site \
-  --zone-id a9c8ba1ce44e6421f623f73b69d3e256 --min-tls 1.2
+  --domain bucket.tucatalogo.live \
+  --zone-id d5145cb067ce831b7b6d4d416cb810f0 --min-tls 1.2
 pnpm exec wrangler r2 bucket domain list tucatalogo-media-prod
 ```
 
 o en el dashboard: **R2 → bucket `tucatalogo-media-prod` → Settings → Custom
-Domains → Connect domain**, con `tucatalogo-bucket.luisrivas.site`.
+Domains → Connect domain**, con `bucket.tucatalogo.live`.
 
-**Gate F0: resuelto por diseño.** El bucket y los frontends viven en el dominio
-padre; el worker `web` solo enruta `*.tucatalogo.luisrivas.site`. Un patrón
-`*.tucatalogo.luisrivas.site/*` **no puede** casar con
-`tucatalogo-bucket.luisrivas.site`, así que no hay forma de que el wildcard
-intercepte el media host. No existe `cdn.` ni host alternativo.
+**Gate F0: abierto.** Todo vive en la misma zona, así que el patrón
+`*.tucatalogo.live/*` **sí puede** casar con `bucket.tucatalogo.live` (un solo
+label bajo el apex). La precedencia entre una ruta de Worker y un custom domain de
+R2 no está garantizada, así que hay que medirla. Si el wildcard intercepta, la
+salida es una **ruta de negación** (`bucket.tucatalogo.live/*` sin script, vía
+API/dashboard) o mover el bucket a un host fuera del wildcard: nunca un `cdn.` de
+reserva.
 
-Comprobación de regresión (tras cada deploy y cuando la subzona tenga DNS):
+Comprobación (obligatoria antes de dar el media host por bueno):
 
 ```bash
-curl -sSI https://tucatalogo-bucket.luisrivas.site/
+curl -sSI https://bucket.tucatalogo.live/
 # Debe responder R2 (404 de objeto o el objeto pedido), no el 404 del storefront.
 ```
 
-El título de la respuesta delata el origen: un `404` con el HTML del storefront
-significaría que algún worker ganó al bucket, y eso sí habría que investigarlo.
+El `Content-Type` delata el origen: `text/plain` es R2; `text/html` es el
+storefront y significa que el wildcard ganó.
 
 ## Topología de `wrangler.jsonc`
 
@@ -105,9 +107,9 @@ Cada app tiene un `wrangler.jsonc` con:
 - **`env.dev`** y **`env.prod`**: nombres de worker, `vars` y bindings propios.
   Los valores desconocidos son `REPLACE_ME_*`.
 - **Rutas solo en `env.prod`**:
-  - `web`: `*.tucatalogo.luisrivas.site/*` (`zone_name: luisrivas.site`)
-  - `commercial`: `tucatalogo.luisrivas.site/*`
-  - `console`: `console-tucatalogo.luisrivas.site/*`
+  - `web`: `*.tucatalogo.live/*` (`zone_name: tucatalogo.live`)
+  - `commercial`: `tucatalogo.live/*` (apex)
+  - `console`: `console.tucatalogo.live/*`
   - `api`: **ninguna**; solo service binding
 - **Service bindings** `API` en `web`, `commercial` y `console`, apuntando a
   `tucatalogo-api-dev` / `tucatalogo-api-prod`.
@@ -183,7 +185,7 @@ en `sync-secrets` y en el smoke. `SMOKE_STORE_HOST` es una **variable** (no
 secreta) porque el host aparece en logs.
 
 `SMOKE_STORE_HOST` tiene un **fallback de CI**, no de runtime: si la variable no
-existe, `deploy-prod.yml` usa `demo.tucatalogo.luisrivas.site` para no romper el deploy por un
+existe, `deploy-prod.yml` usa `demo.tucatalogo.live` para no romper el deploy por un
 host de smoke. En cuanto el owner tenga una tienda real de bajo riesgo, debe crear
 la variable en `prod` (o a nivel de repo): el fallback apunta a un host que solo es
 válido mientras exista esa tienda.
@@ -328,12 +330,12 @@ primer push de este cambio es el que estrena el Environment `prod` en CI.
 
 | Entorno | web | commercial | console |
 | --- | --- | --- | --- |
-| prod | `https://<SMOKE_STORE_HOST>/health` | `https://tucatalogo.luisrivas.site/health` | `https://console-tucatalogo.luisrivas.site/health` |
+| prod | `https://<SMOKE_STORE_HOST>/health` | `https://tucatalogo.live/health` | `https://console.tucatalogo.live/health` |
 
 - `env.dev` no tiene smoke automático: su workflow ya no existe.
 - En prod el storefront no tiene host fijo (depende del slug), así que el
-  workflow lee la variable `SMOKE_STORE_HOST` (p. ej. `demo.tucatalogo.luisrivas.site`, una
-  tienda de bajo riesgo). Si la variable no existe, cae en `demo.tucatalogo.luisrivas.site`
+  workflow lee la variable `SMOKE_STORE_HOST` (p. ej. `demo.tucatalogo.live`, una
+  tienda de bajo riesgo). Si la variable no existe, cae en `demo.tucatalogo.live`
   para no romper el deploy; el owner debe crearla cuando tenga una tienda real.
 - `/health` de cada frontend valida `ENVIRONMENT` y `APP_DOMAIN` (200 o 503).
 - El `<subdominio>` workers.dev que usaba el smoke de dev ya no se consulta: el
@@ -360,8 +362,8 @@ de F7 de las apps, no de infraestructura.
 Además, tras el deploy conviene comprobar (manual, sin acciones destructivas):
 
 ```bash
-curl -s https://tucatalogo.luisrivas.site/ | head
-curl -sI "https://<tienda-de-prueba>.tucatalogo.luisrivas.site/"
+curl -s https://tucatalogo.live/ | head
+curl -sI "https://<tienda-de-prueba>.tucatalogo.live/"
 ```
 
 - El storefront debe devolver HTML de la tienda; una tienda inexistente,
@@ -404,45 +406,54 @@ Al migrar:
 2. Rutas de Worker: wildcard para `web` y hosts exactos para `commercial` y
    `console`, con los mismos patrones que hoy pero en la zona nueva. Los nombres
    concretos se deciden al migrar.
-3. `APP_DOMAIN` en los cuatro workers: `tucatalogo.luisrivas.site` → nuevo host, y
-   `STORE_ORIGIN_TEMPLATE` con la nueva subzona de tiendas.
+3. `APP_DOMAIN` en los cuatro workers y `STORE_ORIGIN_TEMPLATE` con la nueva
+   raíz de tiendas.
 4. `STORE_ORIGIN_TEMPLATE`, `CONSOLE_ORIGIN` y `MEDIA_BASE_URL` en el API.
 5. `PROD_HOSTS` y `PROD_REDIRECT_HOSTS` de `packages/shared/src/constants/hosts.ts`
-   y la lista de slugs reservados (`tucatalogo-bucket` cambia de nombre).
-6. Custom domain del bucket de R2 y Redirect Rules del ápice y `www`.
+   y la lista de slugs reservados (los hosts exactos nuevos entran como reservados).
+6. Custom domain del bucket de R2 y Redirect Rule de `www`.
 7. Resend (dominio de envío) y Turnstile (hostnames del widget).
 8. Documentación y smoke de los hosts nuevos.
 
 Las cookies son host-only y no llevan `Domain`: no hay migración de sesiones, solo
 se vuelve a iniciar sesión en el host nuevo.
 
+## Migración desde `luisrivas.site` (limpieza)
+
+El proyecto vivió antes en `luisrivas.site`. Esa zona **no se borra ni se
+reconfigura**: solo se eliminan los registros que eran nuestros, para no dejar
+hosts colgando ni interceptables.
+
+| Registro a eliminar (zona `luisrivas.site`, `a9c8ba1ce44e6421f623f73b69d3e256`) | Motivo |
+| --- | --- |
+| `tucatalogo.luisrivas.site` | Antiguo commercial |
+| `*.tucatalogo.luisrivas.site` | Antiguo comodín de tiendas |
+| `console-tucatalogo.luisrivas.site` | Antiguo console |
+| `tucatalogo-bucket.luisrivas.site` | Antiguo custom domain de R2 |
+
+No se toca nada más de esa zona (apex, `www`, ni registros de otros proyectos).
+
 ## Pendiente cloud
 
-- **Hecho en Cloudflare:** zona `luisrivas.site`, D1 `tucatalogo-prod`
-  (`ed32bca0-2ed9-4a07-97e5-018e8a15049f`, ENAM), R2 `tucatalogo-media-prod` con
-  custom domain activo `tucatalogo-bucket.luisrivas.site` (sirve 404 de R2),
+- **Hecho en Cloudflare:** zona `tucatalogo.live`, D1 `tucatalogo-prod`
+  (`ed32bca0-2ed9-4a07-97e5-018e8a15049f`, ENAM), R2 `tucatalogo-media-prod`,
   worker `api` desplegado con sus 5 secrets y worker `web` desplegado **sin ruta**.
 - **Pendiente en Cloudflare:**
-  - Permiso de token **Zone `luisrivas.site` → Workers Routes → Edit** (y
-    `Zone → Read`): sin él no se aplican las rutas de `web`, `commercial` ni
-    `console`. Es lo que bloquea el deploy.
-  - **DNS de la subzona**: no existe `*` en `tucatalogo.luisrivas.site` ni
-    registros para `demo`, `console-tucatalogo`. Sin ellos todo resuelve NXDOMAIN.
-    **No se crea comodín en `luisrivas.site`** y no se tocan los registros de otros
-    proyectos de la zona.
-  - Turnstile: confirmar que los hostnames del widget incluyen
-    `tucatalogo.luisrivas.site`.
-  - Resend: dominio de envío `luisrivas.site` verificado (SPF/DKIM) con la API key
-    del Environment secret.
-  - Redirect Rules 301 del ápice y `www` hacia el commercial: hoy `luisrivas.site` y
-    `www` apuntan a Vercel en **DNS-only**, así que la regla no se aplicaría hasta
-    proxiarlos.
-  - **Gate F0 (wildcard vs bucket): resuelto por diseño** — el wildcard vive en la
-    subzona y el bucket en el padre. Queda el `curl` de regresión.
+  - Añadir la zona **`tucatalogo.live`** al `CLOUDFLARE_API_TOKEN` con
+    `Workers Routes → Edit` + `Zone → Read` (y mantener D1/Workers/R2): sin eso no
+    se aplican las rutas de `web`, `commercial` ni `console`.
+  - **DNS de `tucatalogo.live`**: `@`, `*`, `console`, `www` proxied, y el custom
+    domain `bucket` de R2. Sin ellos todo resuelve NXDOMAIN.
+  - Turnstile: actualizar los hostnames del widget a `tucatalogo.live`.
+  - Resend: verificar el dominio de envío `tucatalogo.live` (SPF/DKIM).
+  - Redirect Rule 301 de `www` → `tucatalogo.live` (el apex ya es el commercial).
+  - **Gate F0 (wildcard vs bucket): abierto** — con todo en una zona,
+    `*.tucatalogo.live` puede casar con `bucket.tucatalogo.live`. Revalidar con
+    `curl`; si intercepta, ruta de negación sin script.
 - **En GitHub:** Environment `prod` con los 5 Environment secrets
   (`BETTER_AUTH_SECRET_STORE`, `BETTER_AUTH_SECRET_CONSOLE`, `INIT_TOKEN`,
   `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`), las variables `TURNSTILE_SITE_KEY` y
-  `SMOKE_STORE_HOST` (`demo.tucatalogo.luisrivas.site`) y los 2 Repository secrets
+  `SMOKE_STORE_HOST` (`demo.tucatalogo.live`) y los 2 Repository secrets
   de Cloudflare.
 - **Secretos del worker api en prod:** ✅ aplicados con `sync-secrets`
   (`wrangler secret put --env prod`). En rotaciones se relanza el workflow.
