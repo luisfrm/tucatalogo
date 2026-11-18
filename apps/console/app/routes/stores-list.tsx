@@ -121,8 +121,14 @@ export default function StoresList() {
         />
       ) : (
         <>
-          {/* Desktop: tabla densa */}
-          <div className="hidden overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface shadow-[var(--shadow-sm)] md:block">
+          {/* Desktop: tabla densa. La región es focusable para que el teclado
+              pueda desplazarla cuando el ancho no llega a `min-w`. */}
+          <div
+            role="region"
+            aria-label="Listado de tiendas"
+            tabIndex={0}
+            className="focus-ring hidden overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface shadow-[var(--shadow-sm)] md:block"
+          >
             <table className="w-full min-w-[760px] border-collapse text-[13px]">
               <caption className="sr-only">Tiendas del SaaS</caption>
               <thead className="bg-surface-2 text-left text-[11px] uppercase tracking-[0.08em] text-text-muted">

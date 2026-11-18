@@ -391,7 +391,14 @@ export default function StoreDetail() {
                 Todavía no hay movimientos registrados.
               </p>
             ) : (
-              <div className="overflow-x-auto">
+              <div
+                role="region"
+                aria-label="Movimientos recientes de la tienda"
+                tabIndex={0}
+                className="focus-ring overflow-x-auto"
+              >
+                {/* La tabla no lleva elementos focusables: la región entra en el
+                    orden de tabulación para poder desplazarla con el teclado a 390 px. */}
                 <table className="w-full min-w-[560px] border-collapse text-[13px]">
                   <thead className="text-left text-[11px] uppercase tracking-[0.08em] text-text-muted">
                     <tr>

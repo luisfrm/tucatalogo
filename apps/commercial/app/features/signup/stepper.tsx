@@ -20,8 +20,16 @@ export function Stepper({ current }: { current: SignupStep }) {
         <p className="text-sm font-medium text-text">{SIGNUP_STEPS[current - 1]}</p>
       </div>
 
+      {/*
+        La barra informa del avance real (no es decorativa): es la única pista de
+        progreso accesible en móvil, donde la lista de pasos está oculta
+        (`sm:grid`). Por eso conserva `role="progressbar"` con nombre propio en
+        lugar de `aria-hidden`, y `aria-valuetext` añade el nombre del paso.
+        `aria-valuenow` va de 1 a 4 para coincidir con "Paso X de 4".
+      */}
       <div
         role="progressbar"
+        aria-label="Progreso del registro"
         aria-valuemin={1}
         aria-valuemax={SIGNUP_STEPS.length}
         aria-valuenow={current}

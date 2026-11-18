@@ -163,7 +163,15 @@ export default function AuditLog() {
                 </h2>
 
                 {/* Desktop */}
-                <div className="hidden overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface shadow-[var(--shadow-sm)] md:block">
+                {/* Un día puede contener solo borrados (`store.delete`), que
+                    se pintan como texto: la región es focusable para que el
+                    teclado pueda desplazarla. */}
+                <div
+                  role="region"
+                  aria-label={`Movimientos de auditoría · ${group.label}`}
+                  tabIndex={0}
+                  className="focus-ring hidden overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface shadow-[var(--shadow-sm)] md:block"
+                >
                   <table className="w-full min-w-[820px] border-collapse text-[13px]">
                     <thead className="bg-surface-2 text-left text-[11px] uppercase tracking-[0.08em] text-text-muted">
                       <tr>
