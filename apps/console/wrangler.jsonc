@@ -7,6 +7,11 @@
     "enabled": true
   },
   "upload_source_maps": true,
+  // Solo local: evita que el inspector de miniflare choque entre sesiones
+  // de `wrangler dev` concurrentes. No afecta al deploy.
+  "dev": {
+    "inspector_port": 0
+  },
   "vars": {
     "ENVIRONMENT": "local",
     "APP_DOMAIN": "localhost",
