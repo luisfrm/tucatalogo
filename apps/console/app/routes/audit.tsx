@@ -1,9 +1,10 @@
 import { listConsoleAudit } from "@tucatalogo/api-client";
-import { Button, buttonVariants } from "@tucatalogo/ui";
+import { Button, buttonVariants, cn } from "@tucatalogo/ui";
 import { data, Form, Link, useLoaderData } from "react-router";
 
 import { EmptyState } from "../components/empty-state";
 import { TextField } from "../components/field";
+import { PageHeader } from "../components/page-header";
 import { Pagination } from "../components/pagination";
 import { ProtectedRouteError } from "../components/route-error";
 import { CodeBadge } from "../components/status-badge";
@@ -73,27 +74,26 @@ export default function AuditLog() {
 
   return (
     <div className="grid gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
-            Console
-          </p>
-          <h1 className="text-xl font-semibold tracking-tight">Auditoría</h1>
-          <p className="mt-0.5 text-sm text-text-muted">
+      <PageHeader
+        title="Auditoría"
+        description={
+          <>
             {formatCount(list.total)} {list.total === 1 ? "movimiento" : "movimientos"} · solo
             lectura.
-          </p>
-        </div>
-        <Link to="/" className={buttonVariants({ variant: "secondary", size: "sm" })}>
-          Volver a tiendas
-        </Link>
-      </header>
+          </>
+        }
+        actions={
+          <Link to="/" className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}>
+            Volver a tiendas
+          </Link>
+        }
+      />
 
       <Form
         key={`${filters.storeId ?? ""}|${filters.action ?? ""}`}
         method="get"
         role="search"
-        className="grid gap-2 rounded-[var(--radius-md)] border border-border bg-surface p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
+        className="grid gap-2.5 rounded-[var(--radius-md)] border border-border bg-surface p-3 shadow-[var(--shadow-sm)] sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
       >
         <TextField
           id="storeId"
@@ -126,7 +126,7 @@ export default function AuditLog() {
             Filtrar
           </Button>
           {hasFilters ? (
-            <Link to="/auditoria" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            <Link to="/auditoria" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
               Limpiar
             </Link>
           ) : null}
@@ -145,7 +145,7 @@ export default function AuditLog() {
             hasFilters ? (
               <Link
                 to="/auditoria"
-                className={buttonVariants({ variant: "secondary", size: "sm" })}
+                className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
               >
                 Quitar filtros
               </Link>
@@ -157,16 +157,17 @@ export default function AuditLog() {
           <div className="grid gap-4">
             {groups.map((group) => (
               <section key={group.key} className="grid gap-2">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-text-muted">
                   {group.label}
+                  <span aria-hidden="true" className="h-px flex-1 bg-border" />
                 </h2>
 
                 {/* Desktop */}
-                <div className="hidden overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface md:block">
+                <div className="hidden overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface shadow-[var(--shadow-sm)] md:block">
                   <table className="w-full min-w-[820px] border-collapse text-[13px]">
-                    <thead className="bg-surface-2 text-left text-[11px] uppercase tracking-wide text-text-muted">
+                    <thead className="bg-surface-2 text-left text-[11px] uppercase tracking-[0.08em] text-text-muted">
                       <tr>
-                        <th scope="col" className="px-3 py-2 font-semibold">Hora (UTC)</th>
+                        <th scope="col" className="whitespace-nowrap px-3 py-2 font-semibold">Hora (UTC)</th>
                         <th scope="col" className="px-3 py-2 font-semibold">Acción</th>
                         <th scope="col" className="px-3 py-2 font-semibold">Tienda</th>
                         <th scope="col" className="px-3 py-2 font-semibold">Actor</th>
@@ -176,7 +177,10 @@ export default function AuditLog() {
                     </thead>
                     <tbody>
                       {group.items.map((entry) => (
-                        <tr key={entry.id} className="border-t border-border align-top">
+                        <tr
+                          key={entry.id}
+                          className="border-t border-border align-top transition-colors hover:bg-surface-2/60"
+                        >
                           <td className="whitespace-nowrap px-3 py-2 tabular-nums text-text-muted">
                             {formatTime(entry.createdAt)}
                           </td>
@@ -188,7 +192,7 @@ export default function AuditLog() {
                             {entry.storeId && entry.action !== "store.delete" ? (
                               <Link
                                 to={`/tiendas/${entry.storeId}`}
-                                className="font-mono text-xs text-primary hover:underline"
+                                className="focus-ring rounded-[var(--radius-sm)] font-mono text-xs text-primary hover:underline"
                               >
                                 {formatAuditTarget(entry)}
                               </Link>
@@ -228,7 +232,7 @@ export default function AuditLog() {
                   {group.items.map((entry) => (
                     <li
                       key={entry.id}
-                      className="grid gap-1 rounded-[var(--radius-md)] border border-border bg-surface p-3"
+                      className="grid gap-1 rounded-[var(--radius-md)] border border-border bg-surface p-3 shadow-[var(--shadow-sm)]"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -244,7 +248,7 @@ export default function AuditLog() {
                         {entry.storeId && entry.action !== "store.delete" ? (
                           <Link
                             to={`/tiendas/${entry.storeId}`}
-                            className="font-mono text-primary hover:underline"
+                            className="focus-ring rounded-[var(--radius-sm)] font-mono text-primary hover:underline"
                           >
                             {formatAuditTarget(entry)}
                           </Link>

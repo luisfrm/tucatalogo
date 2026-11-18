@@ -14,6 +14,70 @@ body {
   color: var(--color-text);
 }
 
+/*
+ * Velo del diálogo de confirmación con el token de texto: nada de negro puro
+ * (la paleta es papel cálido + vino). El `dialog` no lleva clases de backdrop.
+ */
 dialog::backdrop {
-  background-color: rgb(13 16 20 / 0.55);
+  background-color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+
+/* ------------------------------------------------------------------ *
+ * Shell del console
+ * ------------------------------------------------------------------ */
+
+/*
+ * Foco visible de los interactivos que no son `Button`/`Input` (enlaces,
+ * tarjetas, navegación). 2px de anillo + 2px de separación, el mismo par
+ * `ring`/`bg` que usa `@tucatalogo/ui`.
+ */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/*
+ * Sobre la cabecera degradada el anillo `primary` desaparecería en el vino:
+ * se usa el rosa claro de marca, que mantiene 6:1 contra el degradado.
+ */
+.focus-ring-inverse:focus-visible {
+  outline: 2px solid var(--color-primary-subtle);
+  outline-offset: 2px;
+}
+
+/*
+ * Red de seguridad: cualquier enlace de contenido (tablas, pies de tarjeta,
+ * avisos) tiene foco visible aunque el markup olvide la clase. La cabecera
+ * queda fuera porque usa `focus-ring-inverse` sobre el degradado.
+ */
+main a:focus-visible,
+footer a:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/*
+ * Barra indeterminada mientras navega el listado, la ficha o la auditoría.
+ * Es el único estado de carga: no reemplaza el contenido (sin saltos) y se
+ * anuncia por `aria-busy` + la región `role="status"` del shell.
+ */
+.console-progress {
+  animation: console-progress 1.2s ease-in-out infinite;
+}
+
+@keyframes console-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .console-progress {
+    width: 100%;
+    transform: none;
+    animation: none;
+  }
 }

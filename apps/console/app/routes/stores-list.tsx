@@ -1,9 +1,10 @@
-import { Button, buttonVariants } from "@tucatalogo/ui";
+import { Button, buttonVariants, cn } from "@tucatalogo/ui";
 import { data, Form, Link, useLoaderData } from "react-router";
 
 import { Alert } from "../components/alert";
 import { EmptyState } from "../components/empty-state";
 import { SelectField, TextField } from "../components/field";
+import { PageHeader } from "../components/page-header";
 import { Pagination } from "../components/pagination";
 import { ProtectedRouteError } from "../components/route-error";
 import { StoreStatusBadge } from "../components/status-badge";
@@ -45,20 +46,19 @@ export default function StoresList() {
 
   return (
     <div className="grid gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
-            Console
-          </p>
-          <h1 className="text-xl font-semibold tracking-tight">Tiendas</h1>
-          <p className="mt-0.5 text-sm text-text-muted">
+      <PageHeader
+        title="Tiendas"
+        description={
+          <>
             {formatCount(list.total)} {list.total === 1 ? "tienda" : "tiendas"} en total.
-          </p>
-        </div>
-        <Link to="/auditoria" className={buttonVariants({ variant: "secondary", size: "sm" })}>
-          Ver auditoría
-        </Link>
-      </header>
+          </>
+        }
+        actions={
+          <Link to="/auditoria" className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}>
+            Ver auditoría
+          </Link>
+        }
+      />
 
       {deletedSlug ? (
         <Alert tone="success" title="Tienda eliminada">
@@ -73,7 +73,7 @@ export default function StoresList() {
         key={`${filters.q ?? ""}|${filters.status ?? ""}`}
         method="get"
         role="search"
-        className="grid gap-2 rounded-[var(--radius-md)] border border-border bg-surface p-3 sm:grid-cols-[minmax(0,1fr)_190px_auto] sm:items-end"
+        className="grid gap-2.5 rounded-[var(--radius-md)] border border-border bg-surface p-3 shadow-[var(--shadow-sm)] sm:grid-cols-[minmax(0,1fr)_190px_auto] sm:items-end"
       >
         <TextField
           id="q"
@@ -96,7 +96,7 @@ export default function StoresList() {
             Filtrar
           </Button>
           {hasFilters ? (
-            <Link to="/" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            <Link to="/" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
               Limpiar
             </Link>
           ) : null}
@@ -113,7 +113,7 @@ export default function StoresList() {
           }
           action={
             hasFilters ? (
-              <Link to="/" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+              <Link to="/" className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}>
                 Quitar filtros
               </Link>
             ) : null
@@ -122,10 +122,10 @@ export default function StoresList() {
       ) : (
         <>
           {/* Desktop: tabla densa */}
-          <div className="hidden overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface md:block">
+          <div className="hidden overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface shadow-[var(--shadow-sm)] md:block">
             <table className="w-full min-w-[760px] border-collapse text-[13px]">
               <caption className="sr-only">Tiendas del SaaS</caption>
-              <thead className="bg-surface-2 text-left text-[11px] uppercase tracking-wide text-text-muted">
+              <thead className="bg-surface-2 text-left text-[11px] uppercase tracking-[0.08em] text-text-muted">
                 <tr>
                   <th scope="col" className="px-3 py-2 font-semibold">
                     Tienda
@@ -149,11 +149,14 @@ export default function StoresList() {
               </thead>
               <tbody>
                 {list.items.map((store) => (
-                  <tr key={store.id} className="border-t border-border align-top">
+                  <tr
+                    key={store.id}
+                    className="border-t border-border align-top transition-colors hover:bg-surface-2/60"
+                  >
                     <td className="px-3 py-2">
                       <Link
                         to={`/tiendas/${store.id}`}
-                        className="font-medium text-primary hover:underline"
+                        className="focus-ring rounded-[var(--radius-sm)] font-medium text-primary hover:underline"
                       >
                         {store.name}
                       </Link>
@@ -179,7 +182,7 @@ export default function StoresList() {
                     <td className="px-3 py-2 text-right">
                       <Link
                         to={`/tiendas/${store.id}`}
-                        className={buttonVariants({ variant: "secondary", size: "sm" })}
+                        className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
                       >
                         Ver ficha
                       </Link>
@@ -196,7 +199,7 @@ export default function StoresList() {
               <li key={store.id}>
                 <Link
                   to={`/tiendas/${store.id}`}
-                  className="grid gap-1.5 rounded-[var(--radius-md)] border border-border bg-surface p-3"
+                  className="focus-ring grid gap-1.5 rounded-[var(--radius-md)] border border-border bg-surface p-3 shadow-[var(--shadow-sm)] transition-colors hover:border-border-strong"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">

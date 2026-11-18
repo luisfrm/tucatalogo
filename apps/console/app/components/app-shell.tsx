@@ -1,9 +1,47 @@
 import { Button, cn } from "@tucatalogo/ui";
-import { Form, Link, NavLink, useLocation } from "react-router";
+import { Form, Link, useLocation, useNavigation } from "react-router";
 import type { ReactNode } from "react";
 
+import { ConsoleBrand } from "./brand";
+
 /**
- * Carcasa del console: densidad alta, neutra, mobile-first (PLAN §10.4/§11.2).
+ * Ítem de navegación del shell: el estado activo no es solo negrita, es una
+ * píldora `surface` con el texto en `primary` (7.75:1) y un punto `accent` de
+ * 6px como indicador. Los inactivos quedan en `onPrimary/90` sobre el
+ * degradado (≈5.9:1) con hover translúcido.
+ */
+function navItemClasses(active: boolean): string {
+  return cn(
+    "focus-ring-inverse inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-sm font-medium transition-colors",
+    active
+      ? "bg-surface text-primary shadow-[var(--shadow-sm)]"
+      : "text-on-primary/90 hover:bg-on-primary/10 hover:text-on-primary",
+  );
+}
+
+function NavItem({ to, label, active }: { to: string; label: string; active: boolean }) {
+  return (
+    <Link to={to} aria-current={active ? "page" : undefined} className={navItemClasses(active)}>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "size-1.5 shrink-0 rounded-full",
+          active ? "bg-accent" : "bg-transparent",
+        )}
+      />
+      {label}
+    </Link>
+  );
+}
+
+/**
+ * Carcasa del console: densidad alta, mobile-first (PLAN §10.4/§11.2).
+ *
+ * La identidad vive en el marco: cabecera con `--gradient-header`, marca
+ * compartida con `commercial`, navegación con estado activo explícito y una
+ * barra de carga indeterminada para listado, ficha y auditoría. El contenido
+ * se queda sobre papel cálido (`bg` → `surface`), sin fondos de color.
+ *
  * El logout es un POST (`/logout`); nunca un GET.
  */
 export function AppShell({
@@ -14,57 +52,40 @@ export function AppShell({
   children: ReactNode;
 }) {
   const location = useLocation();
+  const navigation = useNavigation();
+  const loading = navigation.state === "loading";
+
   const storesActive = location.pathname === "/" || location.pathname.startsWith("/tiendas");
+  const auditActive = location.pathname.startsWith("/auditoria");
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="flex min-h-screen flex-col bg-bg">
       <a
         href="#contenido"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-[var(--radius-md)] focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary"
+        className="focus-ring sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-[var(--radius-sm)] focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary"
       >
         Saltar al contenido
       </a>
 
-      <header className="sticky top-0 z-20 border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6">
-          <Link to="/" className="flex items-baseline gap-1.5">
-            <span className="text-sm font-semibold tracking-tight text-text">TuCatálogo</span>
-            <span className="rounded-[var(--radius-sm)] border border-border bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-              Console
-            </span>
-          </Link>
+      <span role="status" className="sr-only">
+        {loading ? "Cargando contenido…" : ""}
+      </span>
 
-          <nav aria-label="Secciones" className="flex items-center gap-1 text-sm">
-            <NavLink
-              to="/"
-              end
-              className={cn(
-                "rounded-[var(--radius-sm)] px-2 py-1 font-medium",
-                storesActive
-                  ? "bg-primary-subtle text-primary"
-                  : "text-text-muted hover:bg-surface-2 hover:text-text",
-              )}
-            >
-              Tiendas
-            </NavLink>
-            <NavLink
-              to="/auditoria"
-              className={({ isActive }) =>
-                cn(
-                  "rounded-[var(--radius-sm)] px-2 py-1 font-medium",
-                  isActive
-                    ? "bg-primary-subtle text-primary"
-                    : "text-text-muted hover:bg-surface-2 hover:text-text",
-                )
-              }
-            >
-              Auditoría
-            </NavLink>
+      <header className="sticky top-0 z-20 [background-image:var(--gradient-header)] shadow-[var(--shadow-sm)]">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 sm:px-6">
+          <ConsoleBrand />
+
+          <nav
+            aria-label="Secciones"
+            className="order-3 flex w-full items-center gap-1 sm:order-none sm:ml-3 sm:w-auto"
+          >
+            <NavItem to="/" label="Tiendas" active={storesActive} />
+            <NavItem to="/auditoria" label="Auditoría" active={auditActive} />
           </nav>
 
           <div className="ml-auto flex min-w-0 items-center gap-2">
             <span
-              className="hidden max-w-[220px] truncate text-xs text-text-muted sm:inline"
+              className="hidden max-w-[220px] truncate text-xs text-on-primary/90 sm:inline"
               title={adminEmail}
             >
               {adminEmail}
@@ -76,9 +97,19 @@ export function AppShell({
             </Form>
           </div>
         </div>
+
+        {loading ? (
+          <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden">
+            <div className="console-progress h-full w-1/3 bg-primary-subtle" />
+          </div>
+        ) : null}
       </header>
 
-      <main id="contenido" className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-7">
+      <main
+        id="contenido"
+        aria-busy={loading || undefined}
+        className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-7"
+      >
         {children}
       </main>
     </div>

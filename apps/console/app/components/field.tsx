@@ -29,7 +29,7 @@ export function FieldShell({ id, label, error, hint, children }: FieldShellProps
     <div className="grid gap-1.5">
       <label
         htmlFor={id}
-        className="text-[11px] font-semibold uppercase tracking-wide text-text-muted"
+        className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted"
       >
         {label}
       </label>

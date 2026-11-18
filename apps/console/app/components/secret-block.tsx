@@ -28,7 +28,7 @@ export function CopyField({ label, value }: { label: string; value: string }) {
     <div className="grid gap-1.5">
       <label
         htmlFor="totp-uri"
-        className="text-[11px] font-semibold uppercase tracking-wide text-text-muted"
+        className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted"
       >
         {label}
       </label>
@@ -59,7 +59,7 @@ export function BackupCodes({ codes }: { codes: string[] }) {
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">
           Códigos de respaldo
         </p>
         <Button variant="secondary" size="sm" onClick={() => void copy(joined)}>

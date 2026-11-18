@@ -7,12 +7,13 @@ import {
   suspendConsoleStore,
 } from "@tucatalogo/api-client";
 import type { ConsoleAuditList } from "@tucatalogo/types";
-import { Button, buttonVariants } from "@tucatalogo/ui";
+import { Button, buttonVariants, cn } from "@tucatalogo/ui";
 import { data, Form, Link, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
 
 import { Alert } from "../components/alert";
 import { ConfirmDialog } from "../components/confirm-dialog";
 import { TextAreaField, TextField } from "../components/field";
+import { PageHeader } from "../components/page-header";
 import { ProtectedRouteError } from "../components/route-error";
 import { CodeBadge, StoreStatusBadge } from "../components/status-badge";
 import { apiContext, getApi } from "../lib/api.server";
@@ -211,18 +212,32 @@ function Panel({
   title,
   description,
   actions,
+  tone = "default",
   children,
 }: {
   title: string;
   description?: string;
   actions?: React.ReactNode;
+  tone?: "default" | "danger";
   children: React.ReactNode;
 }) {
   return (
-    <section className="grid gap-3 rounded-[var(--radius-md)] border border-border bg-surface p-4">
+    <section
+      className={cn(
+        "grid gap-3 rounded-[var(--radius-md)] border bg-surface p-4 shadow-[var(--shadow-sm)]",
+        tone === "danger" ? "border-danger/35" : "border-border",
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+          <h2
+            className={cn(
+              "text-sm font-semibold tracking-tight",
+              tone === "danger" ? "text-danger" : "text-text",
+            )}
+          >
+            {title}
+          </h2>
           {description ? <p className="mt-0.5 text-xs text-text-muted">{description}</p> : null}
         </div>
         {actions}
@@ -235,7 +250,7 @@ function Panel({
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-[var(--radius-sm)] border border-border bg-surface-2 px-3 py-2">
-      <p className="text-[11px] uppercase tracking-wide text-text-muted">{label}</p>
+      <p className="text-[11px] uppercase tracking-[0.08em] text-text-muted">{label}</p>
       <p className="text-lg font-semibold tabular-nums">{formatCount(value)}</p>
     </div>
   );
@@ -244,7 +259,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 function Meta({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid gap-0.5">
-      <dt className="text-[11px] uppercase tracking-wide text-text-muted">{label}</dt>
+      <dt className="text-[11px] uppercase tracking-[0.08em] text-text-muted">{label}</dt>
       <dd className="break-words text-sm">{children}</dd>
     </div>
   );
@@ -266,26 +281,30 @@ export default function StoreDetail() {
   return (
     <div className="grid gap-4">
       <div>
-        <Link to="/" className="text-xs font-medium text-primary hover:underline">
+        <Link
+          to="/"
+          className="focus-ring rounded-[var(--radius-sm)] text-xs font-medium text-primary hover:underline"
+        >
           ← Tiendas
         </Link>
       </div>
 
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-semibold tracking-tight">{detail.name}</h1>
-          <p className="font-mono text-xs text-text-muted">{detail.slug}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <StoreStatusBadge status={detail.status} />
-          <Link
-            to={`/auditoria?storeId=${encodeURIComponent(detail.id)}`}
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            Auditoría de la tienda
-          </Link>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Tienda"
+        title={detail.name}
+        description={<span className="font-mono text-xs">{detail.slug}</span>}
+        actions={
+          <>
+            <StoreStatusBadge status={detail.status} />
+            <Link
+              to={`/auditoria?storeId=${encodeURIComponent(detail.id)}`}
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+            >
+              Auditoría de la tienda
+            </Link>
+          </>
+        }
+      />
 
       {actionData?.ok ? (
         <Alert tone="success" title="Acción completada">
@@ -357,7 +376,7 @@ export default function StoreDetail() {
             actions={
               <Link
                 to={`/auditoria?storeId=${encodeURIComponent(detail.id)}`}
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
               >
                 Ver todo
               </Link>
@@ -368,11 +387,13 @@ export default function StoreDetail() {
                 {auditError}
               </Alert>
             ) : recentAudit.length === 0 ? (
-              <p className="text-sm text-text-muted">Todavía no hay movimientos registrados.</p>
+              <p className="rounded-[var(--radius-sm)] bg-surface-2 px-3 py-4 text-center text-sm text-text-muted">
+                Todavía no hay movimientos registrados.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[560px] border-collapse text-[13px]">
-                  <thead className="text-left text-[11px] uppercase tracking-wide text-text-muted">
+                  <thead className="text-left text-[11px] uppercase tracking-[0.08em] text-text-muted">
                     <tr>
                       <th scope="col" className="py-1.5 pr-3 font-semibold">Fecha</th>
                       <th scope="col" className="py-1.5 pr-3 font-semibold">Acción</th>
@@ -382,7 +403,10 @@ export default function StoreDetail() {
                   </thead>
                   <tbody>
                     {recentAudit.map((entry) => (
-                      <tr key={entry.id} className="border-t border-border align-top">
+                      <tr
+                        key={entry.id}
+                        className="border-t border-border align-top transition-colors hover:bg-surface-2/60"
+                      >
                         <td className="whitespace-nowrap py-1.5 pr-3 text-text-muted">
                           {formatDateTime(entry.createdAt)}
                         </td>
@@ -478,7 +502,11 @@ export default function StoreDetail() {
             </dl>
           </Panel>
 
-          <Panel title="Zona de riesgo" description="Eliminar es definitivo y no se puede deshacer.">
+          <Panel
+            title="Zona de riesgo"
+            description="Eliminar es definitivo y no se puede deshacer."
+            tone="danger"
+          >
             <div className="grid gap-2">
               <p className="text-sm text-text-muted">
                 Borra D1, R2 y la cuenta del dueño. El slug queda en cuarentena 90 días.

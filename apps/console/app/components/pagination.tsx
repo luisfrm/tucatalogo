@@ -1,4 +1,4 @@
-import { buttonVariants } from "@tucatalogo/ui";
+import { buttonVariants, cn } from "@tucatalogo/ui";
 import { Link } from "react-router";
 
 /** Paginación server-driven: enlaces que conservan búsqueda y filtros. */
@@ -24,7 +24,7 @@ export function Pagination({
       className="flex items-center justify-between gap-3 border-t border-border pt-3 text-sm"
     >
       {hasPrevious ? (
-        <Link to={buildHref(page - 1)} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+        <Link to={buildHref(page - 1)} className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}>
           Anterior
         </Link>
       ) : (
@@ -34,7 +34,7 @@ export function Pagination({
         Página {page} de {totalPages}
       </span>
       {hasNext ? (
-        <Link to={buildHref(page + 1)} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+        <Link to={buildHref(page + 1)} className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}>
           Siguiente
         </Link>
       ) : (

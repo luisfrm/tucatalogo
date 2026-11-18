@@ -47,7 +47,12 @@ export function ConfirmDialog({
 
   return (
     <>
-      <Button variant={variant} size="sm" onClick={() => dialogRef.current?.showModal()}>
+      {/*
+        El disparador es neutro (secundario): en la barra lateral conviven dos
+        acciones destructivas y no deben competir como CTA. El tono `danger`
+        aparece donde importa, en el botón que confirma dentro del diálogo.
+      */}
+      <Button variant="secondary" size="sm" onClick={() => dialogRef.current?.showModal()}>
         {triggerLabel}
       </Button>
 
@@ -55,12 +60,12 @@ export function ConfirmDialog({
         ref={dialogRef}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="w-[min(92vw,34rem)] rounded-[var(--radius-md)] border border-border bg-surface p-0 text-text shadow-[var(--shadow-lg)] backdrop:bg-black/50"
+        className="m-auto w-[min(92vw,34rem)] max-h-[92dvh] overflow-y-auto rounded-[var(--radius-lg)] border border-border bg-surface p-0 text-text shadow-[var(--shadow-lg)]"
       >
         <Form method="post" className="grid gap-4 p-5">
           <input type="hidden" name="intent" value={intent} />
           <div className="grid gap-1">
-            <h2 id={titleId} className="text-base font-semibold">
+            <h2 id={titleId} className="text-base font-semibold tracking-tight">
               {title}
             </h2>
             <p id={descriptionId} className="text-sm text-text-muted">

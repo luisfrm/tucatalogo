@@ -127,15 +127,21 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         : "No pudimos completar la solicitud. Inténtalo de nuevo.";
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-3 px-6">
-      <p className="text-xs font-semibold uppercase tracking-widest text-text-muted">
-        Error {status}
-      </p>
-      <h1 className="font-heading text-2xl font-semibold">{title}</h1>
-      <p className="text-sm text-text-muted">{details}</p>
-      <Link className="text-sm font-medium text-primary underline underline-offset-4" to="/login">
-        Volver al inicio de sesión
-      </Link>
+    <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col justify-center gap-4 px-4 py-10">
+      <section className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-surface p-6 shadow-[var(--shadow-md)]">
+        <p className="inline-flex w-fit items-center gap-1.5 rounded-[var(--radius-full)] border border-danger/40 bg-danger/8 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-danger">
+          <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+          Error {status}
+        </p>
+        <h1 className="font-heading text-2xl font-semibold tracking-tight text-text">{title}</h1>
+        <p className="text-sm leading-relaxed text-text-muted">{details}</p>
+        <Link
+          className="focus-ring w-fit rounded-[var(--radius-sm)] text-sm font-medium text-primary underline underline-offset-4 hover:text-primary-hover"
+          to="/login"
+        >
+          Volver al inicio de sesión
+        </Link>
+      </section>
     </main>
   );
 }
