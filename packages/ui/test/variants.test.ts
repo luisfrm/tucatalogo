@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { buttonVariants } from "../src/button";
 import { inputVariants } from "../src/input";
+import { selectVariants } from "../src/select";
 
 const HEX_PATTERN = /#[0-9a-f]{3,8}\b/i;
 
@@ -85,6 +86,53 @@ describe("Input", () => {
 
     // `lg` ya vive en 16px: no debe arrastrar un salto en `sm:`.
     const large = inputVariants({ size: "lg" });
+    expect(large).toContain("text-base");
+    expect(large).not.toContain("sm:text-sm");
+  });
+});
+
+describe("Select", () => {
+  it("usa tokens y no hex (select nativo estilizado)", () => {
+    const classes = selectVariants();
+    expect(classes).not.toMatch(HEX_PATTERN);
+    expect(classes).toContain("var(--color-");
+    expect(classes).toContain("appearance-none");
+    expect(classes).toContain("var(--color-border-strong)");
+    expect(classes).toContain("var(--radius-md)");
+  });
+
+  it("declara hover, foco, inválido y disabled", () => {
+    const classes = selectVariants();
+    expect(classes).toContain("hover:border-");
+    expect(classes).toContain("focus-visible:ring-2");
+    expect(classes).toContain("var(--color-ring)");
+    expect(classes).toContain("aria-[invalid=true]:border-[var(--color-danger)]");
+    expect(classes).toContain("disabled:opacity-60");
+  });
+
+  it("reserva el hueco del chevron y deja las opciones legibles", () => {
+    for (const size of ["sm", "md", "lg"] as const) {
+      expect(selectVariants({ size }), size).toMatch(/\bpr-(9|10)\b/);
+    }
+    expect(selectVariants()).toContain("[&>option]:bg-[var(--color-surface)]");
+    expect(selectVariants()).toContain("[&>option]:text-[var(--color-text)]");
+  });
+
+  it("cumple 44px de alto mínimo en móvil", () => {
+    for (const size of ["sm", "md"] as const) {
+      expect(selectVariants({ size }), size).toContain("h-11");
+    }
+    expect(selectVariants({ size: "lg" })).toContain("h-12");
+  });
+
+  it("mantiene 16px en móvil para evitar el zoom de iOS", () => {
+    for (const size of ["sm", "md"] as const) {
+      const classes = selectVariants({ size });
+      expect(classes, size).toContain("text-base");
+      expect(classes, size).toContain("sm:text-sm");
+    }
+
+    const large = selectVariants({ size: "lg" });
     expect(large).toContain("text-base");
     expect(large).not.toContain("sm:text-sm");
   });

@@ -1,8 +1,8 @@
-import { Input, cn, inputVariants } from "@tucatalogo/ui";
+import { Input, Select, cn, inputVariants } from "@tucatalogo/ui";
+import type { SelectProps } from "@tucatalogo/ui";
 import type {
   InputHTMLAttributes,
   ReactNode,
-  SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
 
@@ -98,7 +98,7 @@ export function TextAreaField({
   );
 }
 
-export interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectFieldProps extends Omit<SelectProps, "invalid" | "id"> {
   id: string;
   label: string;
   error?: string;
@@ -112,16 +112,14 @@ export function SelectField({
   error,
   hint,
   options,
-  className,
   ...props
 }: SelectFieldProps) {
   return (
     <FieldShell id={id} label={label} error={error} hint={hint}>
-      <select
+      <Select
         id={id}
-        aria-invalid={error ? true : undefined}
+        invalid={Boolean(error)}
         aria-describedby={describedBy(id, hint, error)}
-        className={cn(inputVariants({ size: "md" }), "pr-8", className)}
         {...props}
       >
         {options.map((option) => (
@@ -129,7 +127,7 @@ export function SelectField({
             {option.label}
           </option>
         ))}
-      </select>
+      </Select>
     </FieldShell>
   );
 }

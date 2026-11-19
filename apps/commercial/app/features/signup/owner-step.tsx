@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-import { Input, cn, inputVariants } from "@tucatalogo/ui";
+import { Input, Select, cn } from "@tucatalogo/ui";
 
 import { CURRENCY_OPTIONS } from "./messages";
 import { slugDomain } from "./slug";
@@ -210,16 +210,16 @@ export function OwnerStep({
           error={errors.currency}
         >
           {({ describedBy, invalid }) => (
-            <select
+            <Select
               id="signup-currency"
               name="currency"
+              size="lg"
               value={draft.currency}
               onChange={(event) =>
                 onChange({ currency: event.target.value as OwnerDraft["currency"] })
               }
               aria-describedby={describedBy}
-              aria-invalid={invalid || undefined}
-              className={cn(inputVariants({ size: "lg" }), "appearance-none")}
+              invalid={invalid}
               required
             >
               <option value="" disabled>
@@ -230,7 +230,7 @@ export function OwnerStep({
                   {option.label}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
         </FieldShell>
       </fieldset>

@@ -6,7 +6,7 @@ import {
   setPanelProductStatus,
 } from "@tucatalogo/api-client";
 import type { PanelProductList, ProductStatusInput, ReorderInput } from "@tucatalogo/types";
-import { Button } from "@tucatalogo/ui";
+import { Button, Select } from "@tucatalogo/ui";
 import { Form, Link, data, useActionData, useNavigation } from "react-router";
 
 import type { Route } from "./+types/products";
@@ -238,31 +238,21 @@ export default function PanelProducts({ loaderData }: Route.ComponentProps) {
             />
           </Field>
           <Field id="products-category" label="Categoría">
-            <select
-              id="products-category"
-              name="category"
-              defaultValue={query.category}
-              className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-            >
+            <Select id="products-category" name="category" defaultValue={query.category}>
               <option value="">Todas</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name} ({category.productCount})
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field id="products-status" label="Estado">
-            <select
-              id="products-status"
-              name="status"
-              defaultValue={query.status}
-              className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-            >
+            <Select id="products-status" name="status" defaultValue={query.status}>
               <option value="all">Todos</option>
               <option value="active">Visibles</option>
               <option value="inactive">Ocultos</option>
-            </select>
+            </Select>
           </Field>
           <div className="flex items-end gap-2">
             <Button type="submit" size="md">Filtrar</Button>

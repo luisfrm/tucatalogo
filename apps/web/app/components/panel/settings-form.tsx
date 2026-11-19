@@ -1,6 +1,6 @@
 import type { Currency, PanelStore } from "@tucatalogo/types";
 import type { ThemeMetadata } from "@tucatalogo/themes";
-import { Button, Input, cn } from "@tucatalogo/ui";
+import { Button, Input, Select, cn } from "@tucatalogo/ui";
 import { useId, useMemo, useState } from "react";
 import { Form } from "react-router";
 
@@ -166,19 +166,22 @@ export function SettingsForm({
           hint="Cambiar la moneda no convierte los precios existentes: solo cambia cómo se muestran."
           required
         >
-          <select
+          <Select
             id={`${idPrefix}-currency`}
             name="currency"
             value={currency}
+            invalid={Boolean(fieldErrors.currency)}
+            aria-describedby={
+              fieldErrors.currency ? `${idPrefix}-currency-error` : `${idPrefix}-currency-hint`
+            }
             onChange={(event) => setCurrency(event.currentTarget.value as Currency)}
-            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           >
             {(Object.keys(CURRENCY_NOTES) as Currency[]).map((option) => (
               <option key={option} value={option}>
                 {option} — {CURRENCY_NOTES[option]}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       </div>
 
@@ -189,18 +192,21 @@ export function SettingsForm({
           hint="El visitante puede cambiarlo; el panel conserva su propio modo."
           error={fieldErrors.colorModeDefault}
         >
-          <select
+          <Select
             id={`${idPrefix}-mode`}
             name="colorModeDefault"
             value={colorModeDefault}
+            invalid={Boolean(fieldErrors.colorModeDefault)}
+            aria-describedby={
+              fieldErrors.colorModeDefault ? `${idPrefix}-mode-error` : `${idPrefix}-mode-hint`
+            }
             onChange={(event) =>
               setColorModeDefault(event.currentTarget.value === "dark" ? "dark" : "light")
             }
-            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           >
             <option value="light">Claro</option>
             <option value="dark">Oscuro</option>
-          </select>
+          </Select>
         </Field>
 
         <Field

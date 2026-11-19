@@ -1,5 +1,5 @@
 import type { Currency, PanelCategory, PanelProduct } from "@tucatalogo/types";
-import { Button, Input } from "@tucatalogo/ui";
+import { Button, Input, Select } from "@tucatalogo/ui";
 import { useId, useMemo, useState } from "react";
 import { Form } from "react-router";
 
@@ -135,12 +135,15 @@ export function ProductForm({
           error={fieldErrors.categoryId}
           hint="Opcional. Si borras la categoría, el producto queda sin categoría."
         >
-          <select
+          <Select
             id={`${id}-category`}
             name="categoryId"
             value={categoryId ?? ""}
+            invalid={Boolean(fieldErrors.categoryId)}
+            aria-describedby={
+              fieldErrors.categoryId ? `${id}-category-error` : `${id}-category-hint`
+            }
             onChange={(event) => setCategoryId(event.currentTarget.value)}
-            className="block h-11 w-full rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-base sm:text-sm focus-visible:border-[var(--color-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
           >
             <option value="">Sin categoría</option>
             {categories.map((category) => (
@@ -148,7 +151,7 @@ export function ProductForm({
                 {category.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Field id={`${id}-active`} label="Visibilidad" hint="Los productos ocultos no se publican.">
