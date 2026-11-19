@@ -10,24 +10,23 @@ import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { StorefrontPreview } from "~/components/storefront-preview";
 import { ThemeFontLoader } from "~/components/theme-fonts";
+import { commercialMeta } from "~/lib/social";
 
+export const HOME_TITLE = "TuCatálogo · Tu catálogo con pedidos por WhatsApp";
+export const HOME_DESCRIPTION =
+  "Crea el catálogo de tu tienda en minutos: enlace propio, cinco temas con versión clara y oscura, panel en español y pedidos directos a tu WhatsApp.";
+
+/**
+ * El juego de metadatos es completo aquí a propósito: al definir `meta()` en la
+ * ruta, el del `root` no se renderiza, así que la imagen OG y compañía tienen
+ * que venir con el título y la descripción de la página.
+ */
 export function meta(_: Route.MetaArgs) {
-  const title = "TuCatálogo · Tu catálogo con pedidos por WhatsApp";
-  const description =
-    "Crea el catálogo de tu tienda en minutos: enlace propio, cinco temas con versión clara y oscura, panel en español y pedidos directos a tu WhatsApp.";
-
-  return [
-    { title },
-    { name: "description", content: description },
-    { property: "og:type", content: "website" },
-    { property: "og:site_name", content: "TuCatálogo" },
-    { property: "og:locale", content: "es_ES" },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-    { name: "twitter:card", content: "summary" },
-    { name: "twitter:title", content: title },
-    { name: "twitter:description", content: description },
-  ];
+  return commercialMeta({
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    path: "/",
+  });
 }
 
 /**

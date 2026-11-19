@@ -18,6 +18,12 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 
+import {
+  CONSOLE_DEFAULT_DESCRIPTION,
+  CONSOLE_DEFAULT_TITLE,
+  consoleMeta,
+} from "~/lib/social";
+
 /**
  * Tokens del console resueltos en servidor (PLAN §10.4/§10.5): identidad viva
  * compartida con `commercial` (paleta, Fraunces + Figtree, radios y sombras),
@@ -60,11 +66,20 @@ const CONSOLE_HEAD = consoleHeadCss();
  */
 const CONSOLE_FONT_PRELOADS = fontPreloadHrefs(["figtree"]);
 
-export function meta() {
-  return [
-    { title: "Console · TuCatálogo" },
-    { name: "robots", content: "noindex, nofollow" },
-  ];
+/**
+ * Metadatos del console: `noindex, nofollow` (backoffice, no se indexa) más el
+ * juego Open Graph para las previsualizaciones internas, con **URL absoluta de
+ * producción** (`https://console.tucatalogo.live/og.png`).
+ *
+ * React Router v8 renderiza solo el `meta()` de la ruta más profunda: las
+ * páginas que definen título repiten el juego con `consoleMeta()` (`/login`).
+ */
+export function meta(_: Route.MetaArgs) {
+  return consoleMeta({
+    title: CONSOLE_DEFAULT_TITLE,
+    description: CONSOLE_DEFAULT_DESCRIPTION,
+    path: "/",
+  });
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -73,7 +88,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        {/*
+          Favicon del console: el mismo mark, con la teja del acento y la "C"
+          en blanco, para distinguirlo de la landing en la misma barra de
+          pestañas. `/favicon.ico` redirige (308) al SVG en `routes/favicon.ts`.
+        */}
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
+        <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+        <meta name="theme-color" content="#F8F5F1" />
         <Meta />
         {CONSOLE_FONT_PRELOADS.map((href) => (
           <link

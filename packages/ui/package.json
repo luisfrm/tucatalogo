@@ -6,6 +6,7 @@
   "description": "Componentes globales (Radix + CVA + tokens)",
   "exports": {
     ".": "./src/index.ts",
+    "./brand-mark": "./src/brand-mark.tsx",
     "./button": "./src/button.tsx",
     "./input": "./src/input.tsx",
     "./cn": "./src/cn.ts"
@@ -25,6 +26,7 @@
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@types/node": "22.20.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "react": "19.3.1",

@@ -12,6 +12,7 @@ import { defineConfig, devices } from "@playwright/test";
  * sola vez:
  *
  *   setup → panel → storefront → isolation → axe → console → console-delete
+ *   (brand corre aparte: no toca datos)
  *
  * Las dependencias expresan **datos** (`setup` crea la tienda, `panel` su
  * catálogo), no salud: un proyecto que falla solo salta a los que dependen de
@@ -43,6 +44,13 @@ export default defineConfig({
   },
   projects: [
     { name: "setup", testDir: "./e2e/setup", testMatch: /.*\.setup\.ts/ },
+    {
+      // Activos de marca: no dependen de datos, así que no esperan a `setup`.
+      name: "brand",
+      testDir: "./e2e/tests",
+      testMatch: /brand\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
     {
       name: "panel",
       testDir: "./e2e/tests",

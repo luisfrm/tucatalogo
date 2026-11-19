@@ -1,18 +1,20 @@
 import type { Route } from "./+types/privacidad";
 
 import { LegalPage } from "~/components/legal-page";
+import { commercialMeta } from "~/lib/social";
 
 const UPDATED_AT = "17 de noviembre de 2026";
 
+const TITLE = "Aviso de privacidad · TuCatálogo";
+const DESCRIPTION =
+  "Qué datos tratamos en TuCatálogo, con qué finalidad, durante cuánto tiempo y cómo ejercer tus derechos.";
+
 export function meta(_: Route.MetaArgs) {
-  return [
-    { title: "Aviso de privacidad · TuCatálogo" },
-    {
-      name: "description",
-      content:
-        "Qué datos tratamos en TuCatálogo, con qué finalidad, durante cuánto tiempo y cómo ejercer tus derechos.",
-    },
-  ];
+  return commercialMeta({
+    title: TITLE,
+    description: DESCRIPTION,
+    path: "/privacidad",
+  });
 }
 
 export default function Privacidad() {

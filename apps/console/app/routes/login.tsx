@@ -10,6 +10,7 @@ import { BackupCodes, CopyField } from "../components/secret-block";
 import { apiContext, getApi } from "../lib/api.server";
 import { describeApiError, fieldErrorsFrom, statusFromApiError } from "../lib/errors";
 import { consoleChallengeCookies, consoleResponseHeaders } from "../lib/http.server";
+import { consoleMeta } from "../lib/social";
 import type { Route } from "./+types/login";
 
 type LoginActionData =
@@ -130,7 +131,10 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Iniciar sesión · Console TuCatálogo" }];
+  return consoleMeta({
+    title: "Iniciar sesión · Console TuCatálogo",
+    path: "/login",
+  });
 }
 
 export default function Login() {

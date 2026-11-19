@@ -1,5 +1,7 @@
 import { Link } from "react-router";
 
+import { BrandMark } from "@tucatalogo/ui";
+
 /**
  * Marca del console, coherente con `commercial` (mismo monograma "TC", misma
  * Fraunces y mismo chip), pero con el acento de producto "Console".
@@ -17,9 +19,9 @@ export function ConsoleBrand() {
     >
       <span
         aria-hidden="true"
-        className="grid size-8 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-surface font-heading text-[13px] font-semibold leading-none text-primary shadow-[var(--shadow-sm)]"
+        className="grid size-8 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-surface text-primary shadow-[var(--shadow-sm)]"
       >
-        TC
+        <BrandMark className="size-full" />
       </span>
       <span className="font-heading text-[15px] font-semibold tracking-tight text-on-primary sm:text-base">
         TuCatálogo

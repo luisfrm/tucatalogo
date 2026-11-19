@@ -1,18 +1,16 @@
 import type { Route } from "./+types/terminos";
 
 import { LegalPage } from "~/components/legal-page";
+import { commercialMeta } from "~/lib/social";
 
 const UPDATED_AT = "17 de noviembre de 2026";
 
+const TITLE = "Términos del servicio · TuCatálogo";
+const DESCRIPTION =
+  "Condiciones de uso de TuCatálogo: cuenta, contenido del catálogo, pedidos por WhatsApp, uso aceptable y eliminación de la tienda.";
+
 export function meta(_: Route.MetaArgs) {
-  return [
-    { title: "Términos del servicio · TuCatálogo" },
-    {
-      name: "description",
-      content:
-        "Condiciones de uso de TuCatálogo: cuenta, contenido del catálogo, pedidos por WhatsApp, uso aceptable y eliminación de la tienda.",
-    },
-  ];
+  return commercialMeta({ title: TITLE, description: DESCRIPTION, path: "/terminos" });
 }
 
 export default function Terminos() {

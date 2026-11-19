@@ -20,3 +20,11 @@ export type {
   SecurityHeadersOptions,
   SecurityHeadersSurface,
 } from "./security-headers";
+
+export { absoluteUrl, socialMetaDescriptors } from "./social-meta";
+export type {
+  SocialImage,
+  SocialMeta,
+  SocialMetaDescriptor,
+  SocialMetaTag,
+} from "./social-meta";

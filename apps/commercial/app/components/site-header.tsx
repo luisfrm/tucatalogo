@@ -1,32 +1,19 @@
 import { Link } from "react-router";
 
-import { Button } from "@tucatalogo/ui";
+import { BrandMark, Button } from "@tucatalogo/ui";
 
 /**
- * Marca: etiqueta de catálogo dibujada a mano (SVG propio, sin emoji) sobre el
- * degradado de conversión. El glifo usa `on-primary`, que tiene 7.9:1 sobre el
- * stop más claro del degradado.
+ * Marca: el monograma "TC" (`@tucatalogo/ui/brand-mark`, el mismo que el
+ * favicon y el lockup) sobre el degradado de conversión. El glifo usa
+ * `on-primary`, que tiene 7.9:1 sobre el stop más claro del degradado.
  */
-function BrandMark() {
+function BrandMarkTile() {
   return (
     <span
       aria-hidden="true"
       className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-cta text-on-primary shadow-sm"
     >
-      <svg
-        viewBox="0 0 24 24"
-        className="size-[18px]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.9}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M20.6 13.1 12.9 20.8a2 2 0 0 1-2.8 0L3.2 13.9a2 2 0 0 1-.6-1.4V5a1.8 1.8 0 0 1 1.8-1.8h7.5a2 2 0 0 1 1.4.6l7.3 7.2a1.6 1.6 0 0 1 0 2.1Z" />
-        <path d="M7.6 7.6h.01" />
-      </svg>
+      <BrandMark className="size-full" />
     </span>
   );
 }
@@ -52,7 +39,7 @@ export function SiteHeader({ compact = false }: { compact?: boolean }) {
           to="/"
           className="inline-flex min-h-11 items-center gap-2.5 rounded-[var(--radius-sm)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface focus-visible:outline-none"
         >
-          <BrandMark />
+          <BrandMarkTile />
           <span className="font-display text-[17px] leading-none font-semibold tracking-tight text-text">
             TuCatálogo
           </span>

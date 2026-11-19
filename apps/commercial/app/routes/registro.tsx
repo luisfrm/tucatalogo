@@ -18,6 +18,7 @@ import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getApi } from "~/lib/api";
 import { getEnv, requireTurnstileSiteKey } from "~/lib/env";
+import { commercialMeta } from "~/lib/social";
 import { DoneStep } from "~/features/signup/done-step";
 import { OtpStep } from "~/features/signup/otp-step";
 import { OwnerStep } from "~/features/signup/owner-step";
@@ -51,16 +52,17 @@ import {
   validateThemeStep,
 } from "~/features/signup/validation";
 
+const TITLE = "Crear mi catálogo · TuCatálogo";
+const DESCRIPTION =
+  "Crea la tienda de tu negocio en cuatro pasos: datos, tema, verificación por correo y publicación.";
+
 export function meta(_: Route.MetaArgs) {
-  return [
-    { title: "Crear mi catálogo · TuCatálogo" },
-    {
-      name: "description",
-      content:
-        "Crea la tienda de tu negocio en cuatro pasos: datos, tema, verificación por correo y publicación.",
-    },
-    { name: "robots", content: "noindex" },
-  ];
+  return commercialMeta({
+    title: TITLE,
+    description: DESCRIPTION,
+    path: "/registro",
+    robots: "noindex",
+  });
 }
 
 export function loader({ context }: Route.LoaderArgs) {

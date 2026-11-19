@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./constants": "./src/constants/index.ts",
     "./libs": "./src/libs/index.ts",
+    "./social-meta": "./src/libs/social-meta.ts",
     "./security-headers": "./src/libs/security-headers.ts"
   },
   "scripts": {

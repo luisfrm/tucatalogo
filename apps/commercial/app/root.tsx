@@ -12,6 +12,11 @@ import type { Route } from "./+types/root";
 import "./app.css";
 
 import { joinStyleTags, styleTagContent } from "~/lib/style-tag";
+import {
+  COMMERCIAL_DEFAULT_DESCRIPTION,
+  COMMERCIAL_DEFAULT_TITLE,
+  commercialMeta,
+} from "~/lib/social";
 
 /**
  * Tokens de la superficie `commercial` y de los 5 temas (para las previews del
@@ -62,6 +67,24 @@ export async function loader() {
   }
 }
 
+/**
+ * Metadatos por defecto de la superficie: Open Graph y Twitter Card con
+ * **URLs absolutas de producción** (`https://tucatalogo.live/og.png`), también
+ * en dev y en previews.
+ *
+ * React Router v8 renderiza solo el `meta()` de la ruta más profunda: cada
+ * página que define su propio título compone el juego completo con
+ * `commercialMeta()` (ver `~/lib/social`), y esta es la red de seguridad para
+ * cualquier ruta que no lo haga.
+ */
+export function meta(_: Route.MetaArgs) {
+  return commercialMeta({
+    title: COMMERCIAL_DEFAULT_TITLE,
+    description: COMMERCIAL_DEFAULT_DESCRIPTION,
+    path: "/",
+  });
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const data = useRouteLoaderData<typeof loader>("root");
 
@@ -70,7 +93,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        {/*
+          Favicon: SVG para todo lo moderno, PNG 32 como red de seguridad y el
+          icono de iOS a sangre (180 × 180, opaco). `/favicon.ico` sigue
+          redirigiendo (308) al SVG en `routes/favicon.ts`.
+        */}
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
+        <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+        {/* La superficie es clara siempre (el injector sirve `light`). */}
+        <meta name="theme-color" content="#FCF4EE" />
         <Meta />
         {/* Antes del CSS: el navegador descubre las fuentes del primer viewport. */}
         {data
