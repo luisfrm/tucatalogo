@@ -1,15 +1,16 @@
-import { getPublicProduct } from "@tucatalogo/api-client";
+import { getPublicProduct, listPublicProducts } from "@tucatalogo/api-client";
 import { Button } from "@tucatalogo/ui";
 import { Link, useRouteLoaderData } from "react-router";
 
 import type { Route } from "./+types/product";
 
+import { ProductCard } from "~/components/product-card";
 import { ProductGallery } from "~/components/product-gallery";
 import { formatStorePrice, priceDecimal } from "~/lib/price";
 import { notFound, resolveStoreQuery, throwApiFailure } from "~/lib/runtime.server";
 import { seoDescriptors, truncateText } from "~/lib/seo";
 import type { RootData } from "~/lib/store-context";
-import { categoryHref, homeHref, productHref } from "~/lib/urls";
+import { homeHref, productHref, productsHref } from "~/lib/urls";
 import { resolveWhatsappLink } from "~/lib/whatsapp";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -22,9 +23,23 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
   try {
     const product = await getPublicProduct(runtime.api, slug, productSlug);
+    const relatedList = await listPublicProducts(runtime.api, slug, {
+      category: product.category?.slug,
+      page: 1,
+    }).catch(() => null);
+
+    const related = (relatedList?.items ?? [])
+      .filter((item) => item.id !== product.id)
+      .slice(0, 4)
+      .map((item) => ({
+        ...item,
+        priceLabel: formatStorePrice(item.priceMinor, item.currency),
+      }));
+
     return {
       siteId,
       product,
+      related,
       priceLabel: formatStorePrice(product.priceMinor, product.currency),
       priceNumeric: priceDecimal(product.priceMinor, product.currency),
     };
@@ -78,28 +93,41 @@ export function meta({ matches }: Route.MetaArgs) {
 
 export default function Product({ loaderData }: Route.ComponentProps) {
   const root = useRouteLoaderData<RootData>("root");
-  const { product, siteId, priceLabel } = loaderData;
+  const { product, related, siteId, priceLabel } = loaderData;
   const whatsapp = resolveWhatsappLink(product.whatsappUrl);
 
   return (
     <article className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-      <Link
-        to={homeHref({ siteId })}
-        className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
-      >
-        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        Volver al catálogo
-      </Link>
+      <nav aria-label="Ruta de navegación" className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
+        <Link to={homeHref({ siteId })} className="hover:text-text">
+          Inicio
+        </Link>
+        <span aria-hidden="true">/</span>
+        <Link to={productsHref({ siteId })} className="hover:text-text">
+          Productos
+        </Link>
+        {product.category ? (
+          <>
+            <span aria-hidden="true">/</span>
+            <Link
+              to={productsHref({ category: product.category.slug, siteId })}
+              className="hover:text-text"
+            >
+              {product.category.name}
+            </Link>
+          </>
+        ) : null}
+        <span aria-hidden="true">/</span>
+        <span className="truncate font-medium text-text">{product.name}</span>
+      </nav>
 
-      <div className="mt-3 grid gap-6 lg:grid-cols-2 lg:gap-10">
+      <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
         <ProductGallery images={product.images} productName={product.name} />
 
         <div className="flex flex-col gap-4">
           {product.category ? (
             <Link
-              to={categoryHref(product.category.slug, { siteId })}
+              to={productsHref({ category: product.category.slug, siteId })}
               className="inline-flex w-fit min-h-9 items-center rounded-full border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-xs font-medium uppercase tracking-wide text-text-muted hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
             >
               {product.category.name}
@@ -145,6 +173,32 @@ export default function Product({ loaderData }: Route.ComponentProps) {
           </p>
         </div>
       </div>
+
+      {related.length > 0 ? (
+        <section aria-labelledby="relacionados-titulo" className="mt-12 border-t-[length:var(--border-width)] border-border pt-8">
+          <div className="mb-5 flex items-center justify-between">
+            <h2
+              id="relacionados-titulo"
+              className="font-heading text-xl font-[var(--font-heading-weight,600)] tracking-[var(--tracking-heading,normal)]"
+            >
+              También te puede interesar
+            </h2>
+            <Link
+              to={productsHref({ category: product.category?.slug, siteId })}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Ver más
+            </Link>
+          </div>
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:gap-5">
+            {related.map((item) => (
+              <li key={item.id}>
+                <ProductCard product={item} siteId={siteId} headingTag="h3" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {root?.store ? (
         <p className="mt-10 text-xs text-text-muted">

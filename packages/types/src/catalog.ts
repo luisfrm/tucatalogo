@@ -162,6 +162,20 @@ export const publicSitemapSchema = z.object({
 });
 export type PublicSitemap = z.infer<typeof publicSitemapSchema>;
 
+export const publicCategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  sortOrder: z.number().int(),
+  productCount: z.number().int(),
+});
+export type PublicCategory = z.infer<typeof publicCategorySchema>;
+
+export const publicCategoryListSchema = z.object({
+  items: z.array(publicCategorySchema),
+});
+export type PublicCategoryList = z.infer<typeof publicCategoryListSchema>;
+
 // ---------------------------------------------------------------------------
 // Panel del dueño
 // ---------------------------------------------------------------------------

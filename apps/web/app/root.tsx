@@ -8,6 +8,9 @@ import {
   useRouteLoaderData,
 } from "react-router";
 
+import { listPublicCategories } from "@tucatalogo/api-client";
+import type { PublicCategory } from "@tucatalogo/types";
+
 import type { Route } from "./+types/root";
 import "./app.css";
 
@@ -79,8 +82,16 @@ export async function loader({ request }: Route.LoaderArgs): Promise<RootData> {
 
   let theme: RootData["theme"] = null;
   let adminCss: string | null = null;
+  let categories: PublicCategory[] = [];
 
   if (store && surface === "storefront") {
+    try {
+      const catResult = await listPublicCategories(runtime.api, slug);
+      categories = catResult.items;
+    } catch {
+      categories = [];
+    }
+
     try {
       theme = buildStorefrontThemeHead({
         themeId: store.themeId,
@@ -121,8 +132,15 @@ export async function loader({ request }: Route.LoaderArgs): Promise<RootData> {
     surface,
     siteId,
     store: store
-      ? { slug: store.slug, name: store.name, logoUrl: store.logoUrl, currency: store.currency }
+      ? {
+          slug: store.slug,
+          name: store.name,
+          logoUrl: store.logoUrl,
+          currency: store.currency,
+          hasWhatsapp: Boolean(store.whatsappNumber),
+        }
       : null,
+    categories,
     mode,
     theme,
     adminCss,
@@ -212,7 +230,12 @@ export default function App() {
   }
 
   return (
-    <StorefrontShell store={data.store} mode={data.mode} siteId={data.siteId}>
+    <StorefrontShell
+      store={data.store}
+      categories={data.categories}
+      mode={data.mode}
+      siteId={data.siteId}
+    >
       <Outlet />
     </StorefrontShell>
   );

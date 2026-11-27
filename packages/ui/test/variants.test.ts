@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { buttonVariants } from "../src/button";
+import { badgeVariants } from "../src/badge";
+import { cardVariants } from "../src/card";
 import { inputVariants } from "../src/input";
 import { selectVariants } from "../src/select";
+import { textareaVariants } from "../src/textarea";
 
 const HEX_PATTERN = /#[0-9a-f]{3,8}\b/i;
 
@@ -135,5 +138,32 @@ describe("Select", () => {
     const large = selectVariants({ size: "lg" });
     expect(large).toContain("text-base");
     expect(large).not.toContain("sm:text-sm");
+  });
+});
+
+describe("Card, Badge y Textarea", () => {
+  it("Card usa tokens semánticos sin hex", () => {
+    const classes = cardVariants({ interactive: true });
+    expect(classes).not.toMatch(HEX_PATTERN);
+    expect(classes).toContain("var(--color-surface)");
+    expect(classes).toContain("var(--shadow-sm)");
+    expect(classes).toContain("var(--shadow-md)");
+  });
+
+  it("Badge usa tokens semánticos en todas sus variantes", () => {
+    for (const variant of ["neutral", "primary", "accent", "success", "warning", "danger"] as const) {
+      const classes = badgeVariants({ variant });
+      expect(classes, variant).not.toMatch(HEX_PATTERN);
+      expect(classes).toContain("var(--color-");
+    }
+  });
+
+  it("Textarea mantiene 16px en móvil y tokens de foco/invalidez", () => {
+    const classes = textareaVariants();
+    expect(classes).not.toMatch(HEX_PATTERN);
+    expect(classes).toContain("text-base");
+    expect(classes).toContain("sm:text-sm");
+    expect(classes).toContain("var(--color-ring)");
+    expect(classes).toContain("aria-[invalid=true]:border-[var(--color-danger)]");
   });
 });

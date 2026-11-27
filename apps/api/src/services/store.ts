@@ -252,6 +252,22 @@ export async function uploadStoreLogo(
   return { logoKey: key, logoUrl: url };
 }
 
+/** Delete the store logo from R2 strictly before clearing `logo_key` in D1. */
+export async function deleteStoreLogo(
+  env: Env,
+  db: Database,
+  context: StoreContext,
+): Promise<PanelStore> {
+  if (context.store.logoKey) {
+    await removeMediaObjects(env, [context.store.logoKey]);
+  }
+  const updated = await updateStoreLogoKey(db, context.store.id, null, new Date());
+  if (!updated) {
+    throw new AppError("NOT_FOUND", CATALOG_MESSAGES.storeNotFound);
+  }
+  return toPanelStore(env, updated, context.owner);
+}
+
 /** `POST /panel/store/suspend`: solo el dueño; nunca pisa una suspensión admin. */
 export async function suspendStoreByOwner(
   env: Env,

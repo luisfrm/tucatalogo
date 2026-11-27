@@ -44,6 +44,7 @@ import type {
   ProductImageUpdateInput,
   ProductStatusInput,
   ProductUpdateInput,
+  PublicCategoryList,
   PublicHero,
   PublicProductDetail,
   PublicProductList,
@@ -475,6 +476,12 @@ export function getPublicSitemap(api: ApiClient, slug: string): Promise<PublicSi
   return readApiJson<PublicSitemap>(api.client.public[":slug"].sitemap.$get({ param: { slug } }));
 }
 
+export function listPublicCategories(api: ApiClient, slug: string): Promise<PublicCategoryList> {
+  return readApiJson<PublicCategoryList>(
+    api.client.public[":slug"].categories.$get({ param: { slug } }),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Panel del dueño — tienda
 // ---------------------------------------------------------------------------
@@ -504,6 +511,12 @@ export function uploadStoreLogo(
   form: FormData,
 ): Promise<PanelStoreLogoResponse> {
   return requestForm<PanelStoreLogoResponse>(api, "/panel/store/logo", context, form);
+}
+
+export function deleteStoreLogo(api: ApiClient, context: ApiContext): Promise<PanelStore> {
+  return readApiJson<PanelStore>(
+    api.client.panel.store.logo.$delete(undefined, { headers: apiHeaders(context) }),
+  );
 }
 
 export function suspendPanelStore(
@@ -747,6 +760,19 @@ export async function deletePanelCategory(
       { param: { id: categoryId } },
       { headers: apiHeaders(context) },
     ),
+  );
+}
+
+export async function reorderPanelCategories(
+  api: ApiClient,
+  context: ApiContext,
+  input: ReorderInput,
+): Promise<void> {
+  await readApiVoid(
+    api.client.panel.categories.reorder.$patch(undefined, {
+      headers: jsonHeaders(context),
+      init: { body: JSON.stringify(input) },
+    }),
   );
 }
 

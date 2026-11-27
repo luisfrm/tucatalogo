@@ -1,6 +1,17 @@
-import { cn } from "@tucatalogo/ui";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+  Button,
+  cn,
+} from "@tucatalogo/ui";
 import type { ReactNode } from "react";
-import { Link } from "react-router";
+import { Form, Link } from "react-router";
 
 import { panelHref, totalPages } from "~/lib/urls";
 
@@ -292,5 +303,62 @@ export function FormError({ message }: { message?: string | null }) {
     <p role="alert" className="text-sm font-medium text-danger">
       {message}
     </p>
+  );
+}
+
+/**
+ * Reusable Radix AlertDialog confirmation for destructive panel actions.
+ * Submits a standard POST form with `confirm="eliminar"` so server actions stay unchanged.
+ */
+export function ConfirmDeleteDialog({
+  triggerLabel = "Eliminar",
+  title,
+  description,
+  confirmLabel = "Eliminar",
+  intent,
+  fields,
+  disabled,
+}: {
+  triggerLabel?: string;
+  title: string;
+  description: string;
+  confirmLabel?: string;
+  intent: string;
+  fields?: Record<string, string>;
+  disabled?: boolean;
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button type="button" variant="ghost" size="sm" className="text-danger hover:bg-surface-2" disabled={disabled}>
+          {triggerLabel}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <Form method="post" className="mt-2">
+          <input type="hidden" name="intent" value={intent} />
+          <input type="hidden" name="confirm" value="eliminar" />
+          {fields
+            ? Object.entries(fields).map(([key, value]) => (
+                <input key={key} type="hidden" name={key} value={value} />
+              ))
+            : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button type="button" variant="secondary" size="md">
+                Cancelar
+              </Button>
+            </AlertDialogCancel>
+            <Button type="submit" variant="danger" size="md" disabled={disabled}>
+              {confirmLabel}
+            </Button>
+          </AlertDialogFooter>
+        </Form>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

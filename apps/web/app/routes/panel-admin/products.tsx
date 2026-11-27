@@ -12,6 +12,7 @@ import { Form, Link, data, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/products";
 
 import {
+  ConfirmDeleteDialog,
   Field,
   FormError,
   PanelAlert,
@@ -395,27 +396,15 @@ export default function PanelProducts({ loaderData }: Route.ComponentProps) {
                               {product.isActive ? "Ocultar" : "Mostrar"}
                             </Button>
                           </Form>
-                          <details className="relative">
-                            <summary className="inline-flex h-11 cursor-pointer list-none items-center rounded-[var(--radius-md)] px-3 text-sm font-medium text-danger hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] sm:h-9">
-                              Eliminar
-                            </summary>
-                            <div className="absolute right-0 z-20 mt-1 w-72 rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border bg-surface p-3 shadow-[var(--shadow-lg)]">
-                              <Form method="post" className="flex flex-col gap-2">
-                                <input type="hidden" name="intent" value="delete" />
-                                <input type="hidden" name="productId" value={product.id} />
-                                <p className="text-sm">
-                                  Se ocultará “{product.name}” del catálogo. Es un borrado lógico.
-                                </p>
-                                <label className="flex items-start gap-2 text-xs">
-                                  <input type="checkbox" name="confirm" value="eliminar" required className="mt-0.5 size-4" />
-                                  Confirmo que quiero eliminar este producto.
-                                </label>
-                                <Button type="submit" variant="danger" size="sm" disabled={pending}>
-                                  Eliminar producto
-                                </Button>
-                              </Form>
-                            </div>
-                          </details>
+                          <ConfirmDeleteDialog
+                            triggerLabel="Eliminar"
+                            title={`Eliminar “${product.name}”`}
+                            description="Se ocultará del catálogo. Es un borrado lógico y podrás seguir viendo las imágenes hasta eliminar la tienda."
+                            confirmLabel="Eliminar producto"
+                            intent="delete"
+                            fields={{ productId: product.id }}
+                            disabled={pending}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -426,7 +415,10 @@ export default function PanelProducts({ loaderData }: Route.ComponentProps) {
           </div>
 
           <ul className="flex flex-col gap-3 sm:hidden">
-            {items.map((product) => (
+            {items.map((product, index) => {
+              const isFirst = page === 1 && index === 0;
+              const isLast = !hasMore && index === items.length - 1;
+              return (
               <li key={product.id}>
                 <PanelCard as="article" className="flex flex-col gap-3">
                   <div className="flex items-start gap-3">
@@ -456,22 +448,64 @@ export default function PanelProducts({ loaderData }: Route.ComponentProps) {
                     {product.categoryId ? categoryById.get(product.categoryId) ?? "Sin categoría" : "Sin categoría"} ·{" "}
                     {product.imageCount} {product.imageCount === 1 ? "imagen" : "imágenes"}
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button asChild variant="secondary" size="sm">
-                      <Link to={panelHref(`productos/${product.id}`, { siteId })}>Editar</Link>
-                    </Button>
-                    <Form method="post">
-                      <input type="hidden" name="intent" value="toggle" />
-                      <input type="hidden" name="productId" value={product.id} />
-                      <input type="hidden" name="isActive" value={product.isActive ? "false" : "true"} />
-                      <Button type="submit" variant="ghost" size="sm" disabled={pending}>
-                        {product.isActive ? "Ocultar" : "Mostrar"}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button asChild variant="secondary" size="sm">
+                        <Link to={panelHref(`productos/${product.id}`, { siteId })}>Editar</Link>
                       </Button>
-                    </Form>
+                      <Form method="post">
+                        <input type="hidden" name="intent" value="toggle" />
+                        <input type="hidden" name="productId" value={product.id} />
+                        <input type="hidden" name="isActive" value={product.isActive ? "false" : "true"} />
+                        <Button type="submit" variant="ghost" size="sm" disabled={pending}>
+                          {product.isActive ? "Ocultar" : "Mostrar"}
+                        </Button>
+                      </Form>
+                      <ConfirmDeleteDialog
+                        triggerLabel="Eliminar"
+                        title={`Eliminar “${product.name}”`}
+                        description="Se ocultará del catálogo. Es un borrado lógico."
+                        confirmLabel="Eliminar producto"
+                        intent="delete"
+                        fields={{ productId: product.id }}
+                        disabled={pending}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Form method="post">
+                        <input type="hidden" name="intent" value="reorder" />
+                        <input type="hidden" name="productId" value={product.id} />
+                        <input type="hidden" name="direction" value="up" />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="icon"
+                          disabled={pending || isFirst}
+                          aria-label={`Subir ${product.name}`}
+                        >
+                          ↑
+                        </Button>
+                      </Form>
+                      <Form method="post">
+                        <input type="hidden" name="intent" value="reorder" />
+                        <input type="hidden" name="productId" value={product.id} />
+                        <input type="hidden" name="direction" value="down" />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="icon"
+                          disabled={pending || isLast}
+                          aria-label={`Bajar ${product.name}`}
+                        >
+                          ↓
+                        </Button>
+                      </Form>
+                    </div>
                   </div>
                 </PanelCard>
               </li>
-            ))}
+              );
+            })}
           </ul>
 
           <PanelPagination

@@ -23,6 +23,8 @@ export interface ThemeMetadata {
   fonts: ThemeFontFamilies;
   /** Modos que el tema implementa. */
   availableModes: readonly ColorMode[];
+  /** Modo sugerido para previsualizar el tema (p. ej. dark en Velvet Noir). */
+  defaultPreviewMode: ColorMode;
   /** Frases cortas para la tarjeta del picker. */
   highlights: readonly string[];
 }
@@ -37,6 +39,8 @@ export interface ThemeDefinition {
   /** Perfil del motor OKLCH: cómo se deriva el primario del cliente. */
   colorProfile: ThemeColorProfile;
   fontFamilies: ThemeFontFamilies;
+  /** Variables CSS aditivas de personalidad (peso, tracking, radios de tarjeta/botón). */
+  styleVars: Readonly<Record<string, string>>;
   /** Metadata del picker derivada del tema (misma fuente de verdad). */
   metadata: ThemeMetadata;
 }

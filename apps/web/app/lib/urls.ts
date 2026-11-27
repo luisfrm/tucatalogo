@@ -83,6 +83,18 @@ export function homeHref(input: Partial<CatalogHrefInput> = {}): string {
   return storeHref("/", { siteId: input.siteId, query });
 }
 
+export function productsHref(
+  input: Partial<CatalogHrefInput> & { sort?: string | null } = {},
+): string {
+  const query: Record<string, QueryValue> = {
+    category: input.category ?? null,
+    q: input.q ?? null,
+    sort: input.sort ?? null,
+    page: input.page && input.page > 1 ? input.page : null,
+  };
+  return storeHref("/productos", { siteId: input.siteId, query });
+}
+
 export function productHref(slug: string, options: { siteId?: string | null } = {}): string {
   return storeHref(`/producto/${encodeURIComponent(slug)}`, { siteId: options.siteId });
 }

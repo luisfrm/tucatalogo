@@ -1,6 +1,15 @@
 import type { PanelStore } from "@tucatalogo/types";
-import { Button, cn } from "@tucatalogo/ui";
-import type { ReactNode } from "react";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  cn,
+} from "@tucatalogo/ui";
+import { useState, type ReactNode } from "react";
 import { Form, Link, NavLink, useLocation } from "react-router";
 
 import { homeHref, panelHref } from "~/lib/urls";
@@ -68,6 +77,7 @@ function NavList({
 }
 
 export function PanelShell({ store, user, mode, siteId, children }: PanelShellProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const suspended = store.status === "suspended";
   const suspendedByAdmin = suspended && store.suspendedBy === "admin";
@@ -114,22 +124,40 @@ export function PanelShell({ store, user, mode, siteId, children }: PanelShellPr
               </span>
             </Link>
 
-            <details className="lg:hidden">
-              <summary className="inline-flex h-11 cursor-pointer list-none items-center rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
-                Menú
-              </summary>
-              <div className="absolute left-4 right-4 z-40 mt-2 rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border bg-surface p-2 shadow-[var(--shadow-lg)]">
-                <NavList siteId={siteId} />
-                <div className="mt-2 border-t border-border pt-2">
-                  <Link
-                    to={homeHref({ siteId })}
-                    className="flex min-h-11 items-center rounded-[var(--radius-md)] px-3 text-sm font-medium text-text-muted hover:bg-surface-2 hover:text-text"
-                  >
-                    Ver tienda
-                  </Link>
+            <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Abrir menú del panel"
+                  className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] lg:hidden"
+                >
+                  <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <line x1="4" y1="6" x2="20" y2="6" />
+                    <line x1="4" y1="12" x2="20" y2="12" />
+                    <line x1="4" y1="18" x2="20" y2="18" />
+                  </svg>
+                  <span>Menú</span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>{store.name}</DialogTitle>
+                  <DialogDescription>Navegación del panel de administración</DialogDescription>
+                </DialogHeader>
+                <div className="mt-2">
+                  <NavList siteId={siteId} onNavigate={() => setMenuOpen(false)} />
+                  <div className="mt-3 border-t border-border pt-3">
+                    <Link
+                      to={homeHref({ siteId })}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex min-h-11 items-center rounded-[var(--radius-md)] px-3 text-sm font-medium text-text-muted hover:bg-surface-2 hover:text-text"
+                    >
+                      Ver tienda
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </details>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="hidden px-3 pb-5 lg:block">

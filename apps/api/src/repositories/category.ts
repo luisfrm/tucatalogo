@@ -149,3 +149,55 @@ export async function listPublicCategoryEntries(
     .where(eq(categories.storeId, storeId))
     .orderBy(asc(categories.sortOrder), asc(categories.name));
 }
+
+/** Public categories ordered by sortOrder with active, non-deleted product counts. */
+export async function listPublicCategories(
+  db: Database,
+  storeId: string,
+): Promise<CategoryWithCount[]> {
+  const rows = await db
+    .select({
+      category: categories,
+      productCount: sql<number>`count(${products.id})`,
+    })
+    .from(categories)
+    .leftJoin(
+      products,
+      and(
+        eq(products.categoryId, categories.id),
+        eq(products.storeId, storeId),
+        eq(products.isActive, true),
+        eq(products.isDeleted, false),
+      ),
+    )
+    .where(eq(categories.storeId, storeId))
+    .groupBy(categories.id)
+    .orderBy(asc(categories.sortOrder), asc(categories.name));
+
+  return rows.map((row) => ({ ...row.category, productCount: Number(row.productCount ?? 0) }));
+}
+
+export async function listCategoryIds(db: Database, storeId: string): Promise<string[]> {
+  const rows = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(eq(categories.storeId, storeId));
+  return rows.map((row) => row.id);
+}
+
+/** Reorder store categories atomically via D1 batch. */
+export async function reorderCategories(
+  db: Database,
+  storeId: string,
+  ids: readonly string[],
+  now: Date,
+): Promise<void> {
+  const statements = ids.map((id, index) =>
+    db
+      .update(categories)
+      .set({ sortOrder: index, updatedAt: now })
+      .where(and(eq(categories.storeId, storeId), eq(categories.id, id))),
+  );
+  if (statements.length === 0) return;
+  await db.batch([statements[0]!, ...statements.slice(1)]);
+}

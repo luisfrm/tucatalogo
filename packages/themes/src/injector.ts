@@ -107,7 +107,13 @@ export function renderThemeCss(
   tokens: ThemeTokens,
   mode: ColorMode,
 ): string {
-  return renderTokensCss(themeSelector(themeId, mode), tokens, mode);
+  const theme = getTheme(themeId);
+  return renderTokensCss(
+    themeSelector(themeId, mode),
+    tokens,
+    mode,
+    Object.keys(theme.styleVars).length > 0 ? theme.styleVars : undefined,
+  );
 }
 
 export function renderThemeStyleTag(

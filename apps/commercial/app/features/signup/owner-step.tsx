@@ -1,5 +1,4 @@
-import { Link } from "react-router";
-
+import { useState } from "react";
 import { Input, Select, cn } from "@tucatalogo/ui";
 
 import { CURRENCY_OPTIONS } from "./messages";
@@ -47,6 +46,7 @@ export function OwnerStep({
   storeDomain: string;
 }) {
   const status = slugStatusText(slugStatus, draft, storeDomain);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -100,18 +100,29 @@ export function OwnerStep({
             error={errors.password}
           >
             {({ describedBy, invalid }) => (
-              <Input
-                id="signup-password"
-                name="password"
-                type="password"
-                size="lg"
-                autoComplete="new-password"
-                value={draft.password}
-                onChange={(event) => onChange({ password: event.target.value })}
-                aria-describedby={describedBy}
-                invalid={invalid}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="signup-password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  size="lg"
+                  autoComplete="new-password"
+                  value={draft.password}
+                  onChange={(event) => onChange({ password: event.target.value })}
+                  aria-describedby={describedBy}
+                  invalid={invalid}
+                  className="pr-12"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer rounded-[var(--radius-sm)] px-2 py-1 text-xs font-medium text-text-muted hover:text-text focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  {showPassword ? "Ocultar" : "Ver"}
+                </button>
+              </div>
             )}
           </FieldShell>
 
@@ -124,7 +135,7 @@ export function OwnerStep({
               <Input
                 id="signup-password-confirm"
                 name="passwordConfirm"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 size="lg"
                 autoComplete="new-password"
                 value={draft.passwordConfirm}
@@ -254,14 +265,24 @@ export function OwnerStep({
         </div>
 
         <p className="pl-[26px] text-xs text-text-muted">
-          Puedes leerlos antes:{" "}
-          <Link className="underline underline-offset-4 hover:text-text" to="/terminos">
+          Puedes leerlos antes en una nueva pestaña:{" "}
+          <a
+            className="underline underline-offset-4 hover:text-text"
+            href="/terminos"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             términos
-          </Link>{" "}
+          </a>{" "}
           y{" "}
-          <Link className="underline underline-offset-4 hover:text-text" to="/privacidad">
+          <a
+            className="underline underline-offset-4 hover:text-text"
+            href="/privacidad"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             privacidad
-          </Link>
+          </a>
           .
         </p>
 
