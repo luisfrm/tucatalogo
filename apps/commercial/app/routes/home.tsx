@@ -1,14 +1,16 @@
+import { useState } from "react";
 import { useRouteLoaderData } from "react-router";
 
 import type { ThemeMetadata } from "@tucatalogo/themes";
-import { Button } from "@tucatalogo/ui";
+import type { ColorMode } from "@tucatalogo/types";
+import { Badge, Button, Tabs, TabsList, TabsTrigger } from "@tucatalogo/ui";
 
 import type { Route } from "./+types/home";
 import type { loader as rootLoader } from "~/root";
 
+import { RealStorefrontPreview } from "~/components/real-storefront-preview";
 import { SiteFooter } from "~/components/site-footer";
 import { SiteHeader } from "~/components/site-header";
-import { StorefrontPreview } from "~/components/storefront-preview";
 import { ThemeFontLoader } from "~/components/theme-fonts";
 import { commercialMeta } from "~/lib/social";
 
@@ -192,11 +194,59 @@ function Icon({
  * Piezas de la landing
  * ------------------------------------------------------------------ */
 
-function HeroPreview({ theme }: { theme: ThemeMetadata | undefined }) {
+function HeroPreview({ themes }: { themes: ThemeMetadata[] }) {
+  const [selectedId, setSelectedId] = useState<string>(themes[0]?.id ?? "rose");
+  const activeTheme = themes.find((t) => t.id === selectedId) ?? themes[0];
+  const [mode, setMode] = useState<ColorMode>(
+    activeTheme?.defaultPreviewMode ?? "light",
+  );
+
+  function handleSelectTheme(theme: ThemeMetadata) {
+    setSelectedId(theme.id);
+    setMode(theme.defaultPreviewMode);
+  }
+
   return (
     <div className="relative min-w-0">
-      <div className="relative mx-auto w-full max-w-sm">
-        {/* Marco tipo producto: bisel con la sombra del tema, no un borde suelto. */}
+      <div className="relative mx-auto w-full max-w-md">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Elegir tema para vista previa">
+            {themes.map((t) => {
+              const isSelected = t.id === activeTheme?.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => handleSelectTheme(t)}
+                  aria-pressed={isSelected}
+                  className={[
+                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    isSelected
+                      ? "border-primary bg-primary-subtle text-primary"
+                      : "border-border bg-surface text-text-muted hover:border-border-strong hover:text-text",
+                  ].join(" ")}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="size-2.5 rounded-full border border-border/60"
+                    style={{ backgroundColor: t.swatches[0] }}
+                  />
+                  <span>{t.name}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMode((m) => (m === "light" ? "dark" : "light"))}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors hover:border-border-strong hover:text-text"
+          >
+            <span>{mode === "dark" ? "Modo oscuro" : "Modo claro"}</span>
+          </button>
+        </div>
+
+        {/* Product-like device frame with the theme's own surface & shadow */}
         <div className="rounded-[calc(var(--radius-lg)+7px)] border border-border/80 bg-surface p-1.5 shadow-md">
           <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface">
             <div
@@ -210,16 +260,18 @@ function HeroPreview({ theme }: { theme: ThemeMetadata | undefined }) {
               </span>
               <span className="ml-1 flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-surface px-2 py-1 text-[10px] text-text-muted">
                 <Icon name="lock" className="size-2.5 shrink-0" strokeWidth={2.25} />
-                <span className="truncate">mi-tienda.tucatalogo.live</span>
+                <span className="truncate">
+                  {activeTheme ? `${activeTheme.id}.tucatalogo.live` : "mi-tienda.tucatalogo.live"}
+                </span>
               </span>
             </div>
 
-            {theme ? (
+            {activeTheme ? (
               <>
                 <span className="sr-only">
-                  Vista previa de la portada del tema {theme.name}.
+                  Vista previa de la portada del tema {activeTheme.name}.
                 </span>
-                <StorefrontPreview themeId={theme.id} />
+                <RealStorefrontPreview themeId={activeTheme.id} mode={mode} viewport="mobile" />
               </>
             ) : (
               <p className="p-4 text-sm text-text-muted">Preview no disponible.</p>
@@ -230,8 +282,8 @@ function HeroPreview({ theme }: { theme: ThemeMetadata | undefined }) {
         <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-text-muted">
           <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
           <span>
-            {theme
-              ? "Ejemplo real del tema " + theme.name + ". Los precios se muestran en la moneda que elijas al crear tu tienda."
+            {activeTheme
+              ? `Vista real del tema ${activeTheme.name} en modo ${mode === "dark" ? "oscuro" : "claro"}. Personaliza el color principal en segundos.`
               : "No pudimos cargar la vista previa del tema."}
           </span>
         </p>
@@ -240,101 +292,174 @@ function HeroPreview({ theme }: { theme: ThemeMetadata | undefined }) {
   );
 }
 
-function ThemeCard({
-  theme,
-  featured = false,
-}: {
-  theme: ThemeMetadata;
-  featured?: boolean;
-}) {
+function InteractiveThemeShowcase({ themes }: { themes: ThemeMetadata[] }) {
+  const [selectedId, setSelectedId] = useState<string>(themes[0]?.id ?? "rose");
+  const activeTheme = themes.find((t) => t.id === selectedId) ?? themes[0];
+  const [mode, setMode] = useState<ColorMode>(
+    activeTheme?.defaultPreviewMode ?? "light",
+  );
+  const [viewport, setViewport] = useState<"desktop" | "mobile">("desktop");
+
+  if (!activeTheme) {
+    return null;
+  }
+
+  function handleSelect(theme: ThemeMetadata) {
+    setSelectedId(theme.id);
+    setMode(theme.defaultPreviewMode);
+  }
+
   return (
-    <article
-      className={[
-        "overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface",
-        featured
-          ? "shadow-md lg:grid lg:grid-cols-[1.2fr_0.8fr] lg:items-stretch"
-          : "flex h-full flex-col shadow-sm transition-shadow hover:shadow-md",
-      ].join(" ")}
-    >
-      <div
-        className={
-          featured
-            ? "flex items-center justify-center bg-surface-2 p-4 sm:p-6 lg:order-2 lg:p-8"
-            : "bg-surface-2 p-3"
-        }
-      >
+    <div className="mt-10 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div
-          className={[
-            "w-full overflow-hidden rounded-[var(--radius-md)] border border-border bg-surface shadow-sm",
-            featured ? "mx-auto max-w-[20rem]" : "",
-          ].join(" ")}
+          role="tablist"
+          aria-label="Seleccionar tema"
+          className="flex flex-wrap gap-2"
         >
-          <span className="sr-only">
-            Vista previa de la portada del tema {theme.name}.
-          </span>
-          <StorefrontPreview themeId={theme.id} />
+          {themes.map((theme) => {
+            const active = theme.id === activeTheme.id;
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => handleSelect(theme)}
+                className={[
+                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
+                  active
+                    ? "border-primary bg-primary text-on-primary shadow-sm"
+                    : "border-border bg-surface text-text hover:border-border-strong",
+                ].join(" ")}
+              >
+                <span
+                  aria-hidden="true"
+                  className="size-3 rounded-full border border-white/40"
+                  style={{ backgroundColor: theme.swatches[0] }}
+                />
+                <span>{theme.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Tabs value={mode} onValueChange={(v) => setMode(v as ColorMode)}>
+            <TabsList>
+              <TabsTrigger value="light">Claro</TabsTrigger>
+              <TabsTrigger value="dark">Oscuro</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <Tabs
+            value={viewport}
+            onValueChange={(v) => setViewport(v as "desktop" | "mobile")}
+          >
+            <TabsList>
+              <TabsTrigger value="desktop">Escritorio</TabsTrigger>
+              <TabsTrigger value="mobile">Móvil</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
-      <div
-        className={[
-          "flex flex-1 flex-col",
-          featured ? "p-6 sm:p-8 lg:order-1 lg:justify-center" : "p-5",
-        ].join(" ")}
-      >
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h3
+      <article className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-md lg:grid lg:grid-cols-[1.35fr_0.65fr]">
+        <div className="flex items-center justify-center bg-surface-2 p-4 sm:p-6">
+          <div
             className={[
-              "font-display font-semibold tracking-tight text-text",
-              featured ? "text-3xl" : "text-lg",
+              "w-full overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-sm transition-all",
+              viewport === "mobile" ? "max-w-[340px]" : "max-w-full",
             ].join(" ")}
           >
-            {theme.name}
-          </h3>
-          {featured ? (
-            <span className="rounded-full bg-primary-subtle px-2.5 py-1 text-[11px] font-semibold tracking-wide text-primary uppercase">
-              Por defecto
-            </span>
-          ) : null}
+            <div
+              aria-hidden="true"
+              className="flex items-center gap-2 border-b border-border bg-surface-2 px-3 py-2"
+            >
+              <span className="flex shrink-0 gap-1">
+                <span className="size-2 rounded-full bg-border-strong/70" />
+                <span className="size-2 rounded-full bg-border-strong/70" />
+                <span className="size-2 rounded-full bg-border-strong/70" />
+              </span>
+              <span className="ml-1 truncate rounded-full bg-surface px-2.5 py-0.5 text-[10px] text-text-muted">
+                {activeTheme.id}.tucatalogo.live
+              </span>
+            </div>
+
+            <RealStorefrontPreview
+              themeId={activeTheme.id}
+              mode={mode}
+              viewport={viewport}
+            />
+          </div>
         </div>
 
-        <p
-          className={[
-            "mt-2 leading-relaxed text-text-muted",
-            featured ? "max-w-md text-base" : "text-sm",
-          ].join(" ")}
-        >
-          {theme.description}
-        </p>
+        <div className="flex flex-col justify-between p-6 sm:p-8">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-display text-2xl font-semibold tracking-tight text-text">
+                {activeTheme.name}
+              </h3>
+              {activeTheme.id === "rose" ? (
+                <Badge variant="primary">Por defecto</Badge>
+              ) : null}
+              {activeTheme.defaultPreviewMode === "dark" ? (
+                <Badge variant="neutral">Ideal oscuro</Badge>
+              ) : null}
+            </div>
 
-        <div className={featured ? "mt-6 border-t border-border pt-5" : ""}>
-          <p className="mt-4 text-xs font-medium text-text-muted">
-            {theme.fonts.heading} + {theme.fonts.body}
-          </p>
+            <p className="mt-3 text-sm leading-relaxed text-text-muted">
+              {activeTheme.description}
+            </p>
 
-          <ul aria-label={`Colores de ${theme.name}`} className="mt-3 flex gap-2">
-            {theme.swatches.map((color) => (
-              <li
-                key={color}
-                className="size-6 rounded-full border border-border shadow-sm"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </ul>
+            <div className="mt-6 border-t border-border pt-5">
+              <p className="text-xs font-semibold tracking-wide text-text-muted uppercase">
+                Tipografía
+              </p>
+              <p className="mt-1 text-sm font-medium text-text">
+                {activeTheme.fonts.heading} + {activeTheme.fonts.body}
+              </p>
 
-          <ul className="mt-4 flex flex-wrap gap-1.5">
-            {theme.highlights.map((highlight) => (
-              <li
-                key={highlight}
-                className="rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-text-muted"
+              <p className="mt-4 text-xs font-semibold tracking-wide text-text-muted uppercase">
+                Paleta base
+              </p>
+              <ul
+                aria-label={`Colores de ${activeTheme.name}`}
+                className="mt-2 flex gap-2"
               >
-                {highlight}
-              </li>
-            ))}
-          </ul>
+                {activeTheme.swatches.map((color) => (
+                  <li
+                    key={color}
+                    className="size-7 rounded-full border border-border shadow-sm"
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </ul>
+
+              <ul className="mt-5 flex flex-wrap gap-1.5">
+                {activeTheme.highlights.map((highlight) => (
+                  <li
+                    key={highlight}
+                    className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-text-muted"
+                  >
+                    {highlight}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-8 border-t border-border pt-5">
+            <Button asChild size="lg" className="w-full">
+              <a href={`/registro?tema=${activeTheme.id}`}>
+                Crear tienda con {activeTheme.name}
+              </a>
+            </Button>
+          </div>
         </div>
-      </div>
-    </article>
+      </article>
+    </div>
   );
 }
 
@@ -345,7 +470,6 @@ function ThemeCard({
 export default function Home() {
   const root = useRouteLoaderData<typeof rootLoader>("root");
   const themes = root?.themeMetadata ?? [];
-  const [featuredTheme, ...otherThemes] = themes;
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -400,7 +524,7 @@ export default function Home() {
               </ul>
             </div>
 
-            <HeroPreview theme={featuredTheme} />
+            <HeroPreview themes={themes} />
           </div>
         </section>
 
@@ -489,21 +613,7 @@ export default function Home() {
                 No pudimos cargar los temas. Recarga la página para verlos.
               </p>
             ) : (
-              <div className="mt-12 space-y-6">
-                {featuredTheme ? (
-                  <ThemeCard theme={featuredTheme} featured />
-                ) : null}
-
-                {otherThemes.length > 0 ? (
-                  <ul className="grid gap-6 sm:grid-cols-2">
-                    {otherThemes.map((theme) => (
-                      <li key={theme.id} className="h-full">
-                        <ThemeCard theme={theme} />
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
+              <InteractiveThemeShowcase themes={themes} />
             )}
           </div>
         </section>
@@ -513,10 +623,10 @@ export default function Home() {
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold tracking-[0.12em] text-primary uppercase">
-                Cuatro pasos de registro
+                Registro guiado
               </p>
               <h2 className="mt-3 font-display text-[clamp(1.75rem,3.6vw,2.5rem)] leading-[1.12] font-semibold tracking-tight text-balance text-text">
-                De la idea al enlace en tres pasos
+                De la idea a tu enlace en minutos
               </h2>
               <p className="mt-4 text-base leading-relaxed text-text-muted">
                 El registro son cuatro pasos: datos, tema, verificación por correo y

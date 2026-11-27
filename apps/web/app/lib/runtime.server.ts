@@ -282,6 +282,7 @@ export function healthRootData(request: Request): RootData {
     surface: "storefront",
     siteId: null,
     store: null,
+    categories: [],
     mode: "light",
     theme: null,
     adminCss: null,

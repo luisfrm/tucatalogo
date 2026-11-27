@@ -10,9 +10,11 @@ export interface DefineThemeInput {
   name: string;
   description: string;
   defaultPrimaryColor: string;
+  defaultPreviewMode?: ColorMode;
   colorProfile: ThemeColorProfile;
   fonts: ThemeFontFamilies;
   highlights: readonly string[];
+  styleVars?: Readonly<Record<string, string>>;
   modes: Record<ColorMode, ThemeTokens>;
 }
 
@@ -58,6 +60,7 @@ export function defineTheme(input: DefineThemeInput): ThemeDefinition {
     modes: input.modes,
     colorProfile: input.colorProfile,
     fontFamilies: input.fonts,
+    styleVars: input.styleVars ?? {},
     metadata: {
       id: input.id,
       name: input.name,
@@ -71,6 +74,7 @@ export function defineTheme(input: DefineThemeInput): ThemeDefinition {
       ],
       fonts: input.fonts,
       availableModes: ["light", "dark"] as const,
+      defaultPreviewMode: input.defaultPreviewMode ?? "light",
       highlights: input.highlights,
     },
   };

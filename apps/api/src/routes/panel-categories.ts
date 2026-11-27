@@ -10,6 +10,7 @@ import {
   categoryUpdateSchema,
   panelCategoryListSchema,
   panelCategorySchema,
+  reorderSchema,
   resourceIdSchema,
 } from "@tucatalogo/types";
 
@@ -20,6 +21,7 @@ import {
   createCategory,
   deletePanelCategory,
   listPanelCategories,
+  reorderStoreCategories,
   updatePanelCategory,
 } from "../services/category";
 import type { AppEnv } from "../types";
@@ -37,6 +39,12 @@ export const panelCategoriesRoutes = new Hono<AppEnv>()
     const input = await parseJsonBody(c, categoryCreateSchema);
     const category = await createCategory(dbFor(c), sessionStore(c), input);
     return c.json(panelCategorySchema.parse(category), 201);
+  })
+  /** PATCH /panel/categories/reorder — before `/:id` to avoid route collision. */
+  .patch("/reorder", async (c) => {
+    const input = await parseJsonBody(c, reorderSchema);
+    await reorderStoreCategories(dbFor(c), sessionStore(c).id, input.ids);
+    return c.body(null, 204);
   })
   /** PATCH /panel/categories/:id */
   .patch("/:id", async (c) => {

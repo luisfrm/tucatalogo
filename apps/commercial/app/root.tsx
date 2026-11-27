@@ -45,13 +45,18 @@ export async function loader() {
       fontFaceCss: themes.renderBrandFontFaceCss(),
       fontPreloadHrefs: themes.fontPreloadHrefs(),
       themePreviewCss: joinStyleTags(
-        themeMetadata.map((theme) =>
+        themeMetadata.flatMap((theme) => [
           themes.renderThemeStyleTagFor({
             themeId: theme.id,
             mode: "light",
             primaryColor: theme.defaultPrimaryColor,
           }),
-        ),
+          themes.renderThemeStyleTagFor({
+            themeId: theme.id,
+            mode: "dark",
+            primaryColor: theme.defaultPrimaryColor,
+          }),
+        ]),
       ),
       themeMetadata,
     };

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { data, useFetcher, useRouteLoaderData } from "react-router";
+import { data, useFetcher, useRouteLoaderData, useSearchParams } from "react-router";
 
 import {
   type SignupResponse,
@@ -179,6 +179,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       slug: formData.get("slug"),
       currency: formData.get("currency"),
       themeId: formData.get("themeId"),
+      primaryColor: formData.get("primaryColor") || undefined,
       code: formData.get("code"),
     });
 
@@ -212,10 +213,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 const SLUG_DEBOUNCE_MS = 300;
 const OTP_DEFAULT_EXPIRY_MINUTES = 10;
+const SIGNUP_DRAFT_STORAGE_KEY = "tucatalogo_signup_draft_v1";
 
 export default function Registro({ loaderData }: Route.ComponentProps) {
   const { turnstileSiteKey, storeDomain } = loaderData;
   const root = useRouteLoaderData<typeof rootLoader>("root");
+  const [searchParams] = useSearchParams();
 
   const themeMetadata = root?.themeMetadata ?? [];
   const themeIds = useMemo(
@@ -223,13 +226,26 @@ export default function Registro({ loaderData }: Route.ComponentProps) {
     [themeMetadata],
   );
 
+  const requestedTheme = searchParams.get("tema");
+  const initialThemeId =
+    requestedTheme && themeIds.includes(requestedTheme as (typeof themeIds)[number])
+      ? requestedTheme
+      : null;
+
   const slugFetcher = useFetcher<unknown>();
   const otpFetcher = useFetcher<SignupActionData>();
   const signupFetcher = useFetcher<SignupActionData>();
 
   const [step, setStep] = useState<SignupStep>(1);
   const [draft, setDraft] = useState<OwnerDraft>(() => ({ ...EMPTY_OWNER_DRAFT }));
-  const [themeId, setThemeId] = useState<string | null>(null);
+  const [themeId, setThemeId] = useState<string | null>(initialThemeId);
+  const [primaryColor, setPrimaryColor] = useState<string>(
+    () =>
+      themeMetadata.find((t) => t.id === initialThemeId)?.defaultPrimaryColor ??
+      themeMetadata[0]?.defaultPrimaryColor ??
+      "#C09299",
+  );
+  const [colorCustomized, setColorCustomized] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<{ tone: "info" | "error"; text: string } | null>(
     null,
@@ -284,6 +300,68 @@ export default function Registro({ loaderData }: Route.ComponentProps) {
       return next;
     });
   }, []);
+
+  // Restore non-sensitive draft from sessionStorage (never password).
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SIGNUP_DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<{
+        name: string;
+        email: string;
+        storeName: string;
+        slug: string;
+        currency: OwnerDraft["currency"];
+        themeId: string;
+        primaryColor: string;
+      }>;
+      setDraft((prev) => ({
+        ...prev,
+        name: saved.name ?? prev.name,
+        email: saved.email ?? prev.email,
+        storeName: saved.storeName ?? prev.storeName,
+        slug: saved.slug ?? prev.slug,
+        currency: saved.currency ?? prev.currency,
+      }));
+      if (!initialThemeId && saved.themeId && themeIds.includes(saved.themeId as (typeof themeIds)[number])) {
+        setThemeId(saved.themeId);
+      }
+      if (saved.primaryColor && /^#[0-9a-fA-F]{6}$/.test(saved.primaryColor)) {
+        setPrimaryColor(saved.primaryColor);
+        setColorCustomized(true);
+      }
+    } catch {
+      // Ignore invalid sessionStorage data.
+    }
+  }, [initialThemeId, themeIds]);
+
+  // Persist non-sensitive draft while editing.
+  useEffect(() => {
+    if (step === 4) {
+      try {
+        sessionStorage.removeItem(SIGNUP_DRAFT_STORAGE_KEY);
+      } catch {
+        // Ignore storage errors.
+      }
+      return;
+    }
+    try {
+      sessionStorage.setItem(
+        SIGNUP_DRAFT_STORAGE_KEY,
+        JSON.stringify({
+          name: draft.name,
+          email: draft.email,
+          storeName: draft.storeName,
+          slug: draft.slug,
+          currency: draft.currency,
+          themeId,
+          primaryColor,
+        }),
+      );
+    } catch {
+      // Ignore storage errors.
+    }
+  }, [draft.name, draft.email, draft.storeName, draft.slug, draft.currency, themeId, primaryColor, step]);
 
   // Comprobación en vivo del slug (debounce 300 ms contra el resource route).
   useEffect(() => {
@@ -528,6 +606,7 @@ export default function Registro({ loaderData }: Route.ComponentProps) {
         slug: draft.slug,
         currency: draft.currency,
         themeId: themeId ?? "",
+        primaryColor: /^#[0-9a-fA-F]{6}$/.test(primaryColor) ? primaryColor : "",
         code: code.trim(),
       },
       { method: "post" },
@@ -618,7 +697,18 @@ export default function Registro({ loaderData }: Route.ComponentProps) {
                 <ThemePicker
                   themes={themeMetadata}
                   value={themeId}
-                  onChange={setThemeId}
+                  primaryColor={primaryColor}
+                  onChange={(nextThemeId) => {
+                    setThemeId(nextThemeId);
+                    if (!colorCustomized) {
+                      const nextDefault = themeMetadata.find((t) => t.id === nextThemeId)?.defaultPrimaryColor;
+                      if (nextDefault) setPrimaryColor(nextDefault);
+                    }
+                  }}
+                  onPrimaryColorChange={(hex) => {
+                    setColorCustomized(true);
+                    setPrimaryColor(hex);
+                  }}
                   error={errors.theme}
                 />
               )

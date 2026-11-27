@@ -8,6 +8,7 @@ import type {
   CategoryUpdateInput,
   PanelCategory,
   PanelCategoryList,
+  PublicCategoryList,
 } from "@tucatalogo/types";
 
 import { CATALOG_MESSAGES, CATALOG_REASONS } from "../constants/catalog";
@@ -18,10 +19,14 @@ import {
   getCategoryBySlug,
   insertCategory,
   listCategories,
+  listCategoryIds,
+  listPublicCategories as listPublicCategoryRows,
   maxCategorySortOrder,
+  reorderCategories,
   updateCategory as updateCategoryRow,
   type CategoryWithCount,
 } from "../repositories/category";
+import { assertStoreReadable } from "./store";
 
 function toPanelCategory(category: CategoryWithCount): PanelCategory {
   return {
@@ -166,4 +171,41 @@ export async function deletePanelCategory(
       CATALOG_REASONS.categoryNotFound,
     );
   }
+}
+
+/** Reorder all categories of a store; rejects partial or foreign ID lists. */
+export async function reorderStoreCategories(
+  db: Database,
+  storeId: string,
+  ids: readonly string[],
+): Promise<void> {
+  const existing = new Set(await listCategoryIds(db, storeId));
+  const requested = new Set(ids);
+  if (existing.size !== requested.size || [...requested].some((id) => !existing.has(id))) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      CATALOG_MESSAGES.reorderMismatch,
+      [{ path: "ids", message: CATALOG_MESSAGES.reorderMismatch }],
+      CATALOG_REASONS.reorderMismatch,
+    );
+  }
+  await reorderCategories(db, storeId, ids, new Date());
+}
+
+/** Public categories for storefront navigation and filter chips. */
+export async function listPublicCategories(
+  db: Database,
+  store: Store,
+): Promise<PublicCategoryList> {
+  assertStoreReadable(store);
+  const rows = await listPublicCategoryRows(db, store.id);
+  return {
+    items: rows.map((category) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      sortOrder: category.sortOrder,
+      productCount: Number(category.productCount ?? 0),
+    })),
+  };
 }

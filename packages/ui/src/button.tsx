@@ -17,9 +17,9 @@ import { cn } from "./cn";
 export const buttonVariants = cva(
   [
     "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap",
-    "rounded-[var(--radius-md)] font-medium select-none",
+    "rounded-[var(--radius-button,var(--radius-md))] font-body font-medium select-none",
     "border-[length:var(--border-width)] border-transparent",
-    "transition-[background-color,border-color,color,box-shadow] duration-150 ease-out",
+    "transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.98]",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
     "focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]",
     "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60",

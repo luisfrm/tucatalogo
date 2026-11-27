@@ -1,6 +1,6 @@
 import { Button } from "@tucatalogo/ui";
 import type { PublicHeroSlide } from "@tucatalogo/types";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router";
 
 import { storeHref } from "~/lib/urls";
@@ -60,6 +60,7 @@ function HeroImage({ slide, priority }: { slide: PublicHeroSlide; priority: bool
 
 export function HeroCarousel({ slides, siteId }: HeroCarouselProps) {
   const [index, setIndex] = useState(0);
+  const pointerStartX = useRef<number | null>(null);
   const total = slides.length;
 
   if (total === 0) return null;
@@ -69,14 +70,21 @@ export function HeroCarousel({ slides, siteId }: HeroCarouselProps) {
 
   if (total === 1) {
     return (
-      <section aria-label="Destacado de la tienda" className="overflow-hidden rounded-lg border-[length:var(--border-width)] border-border bg-surface shadow-sm">
+      <section
+        aria-label="Destacado de la tienda"
+        className="overflow-hidden rounded-[var(--radius-card,var(--radius-lg))] border-[length:var(--border-width)] border-border bg-surface shadow-sm"
+      >
         <div className="aspect-[4/5] w-full overflow-hidden bg-surface-2 sm:aspect-[16/7]">
           <HeroImage slide={current} priority />
         </div>
         {current.title || current.subtitle || currentHref ? (
-          <div className="flex flex-col gap-2 p-4 sm:p-5">
-            {current.title ? <h2 className="font-heading text-xl font-semibold sm:text-2xl">{current.title}</h2> : null}
-            {current.subtitle ? <p className="text-sm text-text-muted">{current.subtitle}</p> : null}
+          <div className="flex flex-col gap-2 p-5 sm:p-6">
+            {current.title ? (
+              <h2 className="font-heading text-xl font-[var(--font-heading-weight,600)] tracking-[var(--tracking-heading,normal)] sm:text-2xl">
+                {current.title}
+              </h2>
+            ) : null}
+            {current.subtitle ? <p className="max-w-2xl text-sm text-text-muted">{current.subtitle}</p> : null}
             {currentHref ? <HeroCta href={currentHref} label={current.ctaLabel ?? "Ver más"} /> : null}
           </div>
         ) : null}
@@ -92,7 +100,18 @@ export function HeroCarousel({ slides, siteId }: HeroCarouselProps) {
     <section
       aria-roledescription="carrusel"
       aria-label="Destacados de la tienda"
-      className="overflow-hidden rounded-lg border-[length:var(--border-width)] border-border bg-surface shadow-sm"
+      className="overflow-hidden rounded-[var(--radius-card,var(--radius-lg))] border-[length:var(--border-width)] border-border bg-surface shadow-sm"
+      onPointerDown={(e) => {
+        pointerStartX.current = e.clientX;
+      }}
+      onPointerUp={(e) => {
+        if (pointerStartX.current === null) return;
+        const dx = e.clientX - pointerStartX.current;
+        pointerStartX.current = null;
+        if (Math.abs(dx) > 40) {
+          go(dx < 0 ? 1 : -1);
+        }
+      }}
       onKeyDown={(event) => {
         if (event.key === "ArrowRight") {
           event.preventDefault();

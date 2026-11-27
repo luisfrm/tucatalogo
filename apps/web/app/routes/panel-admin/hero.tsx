@@ -14,6 +14,7 @@ import type { Route } from "./+types/hero";
 
 import { HeroCreateForm, HeroImagesForm } from "~/components/panel/image-uploaders";
 import {
+  ConfirmDeleteDialog,
   Field,
   PanelAlert,
   PanelCard,
@@ -353,25 +354,15 @@ export default function PanelHero({ loaderData }: Route.ComponentProps) {
                         {slide.isActive ? "Ocultar" : "Mostrar"}
                       </Button>
                     </Form>
-                    <details className="relative">
-                      <summary className="inline-flex h-11 cursor-pointer list-none items-center rounded-[var(--radius-md)] px-3 text-sm font-medium text-danger hover:bg-surface-2 sm:h-9">
-                        Eliminar
-                      </summary>
-                      <div className="absolute right-0 z-20 mt-1 w-72 rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border bg-surface p-3 shadow-[var(--shadow-lg)]">
-                        <Form method="post" className="flex flex-col gap-2">
-                          <input type="hidden" name="intent" value="delete-hero" />
-                          <input type="hidden" name="slideId" value={slide.id} />
-                          <p className="text-sm">Se borrarán las dos imágenes del slide.</p>
-                          <label className="flex items-start gap-2 text-xs">
-                            <input type="checkbox" name="confirm" value="eliminar" required className="mt-0.5 size-4" />
-                            Confirmo que quiero eliminar este slide.
-                          </label>
-                          <Button type="submit" variant="danger" size="sm" disabled={pending}>
-                            Eliminar slide
-                          </Button>
-                        </Form>
-                      </div>
-                    </details>
+                    <ConfirmDeleteDialog
+                      triggerLabel="Eliminar"
+                      title="Eliminar slide del hero"
+                      description="Se borrarán las dos imágenes (escritorio y móvil) de este slide."
+                      confirmLabel="Eliminar slide"
+                      intent="delete-hero"
+                      fields={{ slideId: slide.id }}
+                      disabled={pending}
+                    />
                   </div>
                 </div>
 

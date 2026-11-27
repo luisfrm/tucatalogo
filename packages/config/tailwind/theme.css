@@ -1,9 +1,21 @@
 /*
  * Preset de Tailwind v4 compartido.
  * Los tokens son la única fuente de color/tipografía/radios/sombras (PLAN §10.2).
- * `packages/themes` emitirá los valores por tema; aquí solo vive la base neutra
- * para las superficies de administración (panel y console).
+ * `packages/themes` emite los valores por tema en `<head>`; aquí vive la base
+ * neutra para las superficies de administración y los fallbacks de tokens.
  */
+:root {
+  --border-width: 1px;
+  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.06);
+  --shadow-md: 0 4px 12px oklch(0% 0 0 / 0.08);
+  --shadow-lg: 0 12px 32px oklch(0% 0 0 / 0.12);
+  --font-heading-weight: 600;
+  --tracking-heading: -0.02em;
+  --radius-button: var(--radius-md);
+  --radius-card: var(--radius-lg);
+  --hero-overlay: linear-gradient(180deg, rgb(0 0 0 / 0.08) 0%, rgb(0 0 0 / 0.56) 100%);
+}
+
 @theme {
   --color-bg: oklch(99% 0.002 20);
   --color-surface: oklch(100% 0 0);
@@ -34,10 +46,20 @@
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-full: 9999px;
+}
 
-  --border-width: 1px;
+/*
+ * Tailwind v4 compila `shadow-*` con valores estáticos si viven en `@theme`.
+ * Estas utilidades leen siempre las CSS vars del tema activo (`[data-theme]`).
+ */
+@utility shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
 
-  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.06);
-  --shadow-md: 0 4px 12px oklch(0% 0 0 / 0.08);
-  --shadow-lg: 0 12px 32px oklch(0% 0 0 / 0.12);
+@utility shadow-md {
+  box-shadow: var(--shadow-md);
+}
+
+@utility shadow-lg {
+  box-shadow: var(--shadow-lg);
 }

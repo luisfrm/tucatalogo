@@ -1,4 +1,4 @@
-import type { ColorMode, Currency } from "@tucatalogo/types";
+import type { ColorMode, Currency, PublicCategory } from "@tucatalogo/types";
 
 /**
  * Contrato de datos que el loader de `root` entrega a toda la app.
@@ -15,6 +15,7 @@ export interface StoreSummary {
   name: string;
   logoUrl: string | null;
   currency: Currency;
+  hasWhatsapp: boolean;
 }
 
 export interface StorefrontThemeHead {
@@ -37,6 +38,8 @@ export interface RootData {
   /** `?siteId` de la request (solo dev/local); se propaga en los enlaces. */
   siteId: string | null;
   store: StoreSummary | null;
+  /** Categorías activas de la tienda (solo en `storefront`). */
+  categories: PublicCategory[];
   mode: ColorMode;
   /** Tema del storefront (solo en `storefront`). */
   theme: StorefrontThemeHead | null;

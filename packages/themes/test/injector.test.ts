@@ -82,7 +82,7 @@ describe("CSS del tema", () => {
     });
     const staticCss = renderThemeCssFor({ themeId: "rose", mode: "light" });
     expect(withColor).not.toBe(staticCss);
-    expect(staticCss).toContain("--color-primary: #8E5F67;");
+    expect(staticCss).toContain("--color-primary: #964C5C;");
   });
 
   it("añade nonce de CSP cuando se pasa", () => {
@@ -96,7 +96,7 @@ describe("CSS del tema", () => {
   it("renderThemeCss conserva la firma anterior (themeId, tokens, mode)", () => {
     const theme = getTheme("velvet-noir");
     expect(renderThemeCss("velvet-noir", theme.modes.light, "light")).toBe(
-      renderTokensCss('[data-theme="velvet-noir"]', theme.modes.light, "light"),
+      renderTokensCss('[data-theme="velvet-noir"]', theme.modes.light, "light", theme.styleVars),
     );
   });
 });

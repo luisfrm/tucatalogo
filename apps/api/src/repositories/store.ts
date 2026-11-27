@@ -61,7 +61,7 @@ export async function updateStoreSettings(
 export async function updateStoreLogoKey(
   db: Database,
   storeId: string,
-  logoKey: string,
+  logoKey: string | null,
   now: Date,
 ): Promise<Store | null> {
   const rows = await db

@@ -1,5 +1,11 @@
 import type { Currency, PanelStore } from "@tucatalogo/types";
-import type { ThemeMetadata } from "@tucatalogo/themes";
+import {
+  THEME_TOKEN_CSS_VARS,
+  THEME_TOKEN_KEYS,
+  applyPrimaryColor,
+  getTheme,
+  type ThemeMetadata,
+} from "@tucatalogo/themes";
 import { Button, Input, Select, cn } from "@tucatalogo/ui";
 import { useId, useMemo, useState } from "react";
 import { Form } from "react-router";
@@ -30,17 +36,35 @@ function ThemeCard({
   theme,
   selected,
   mode,
+  primaryColor,
   onSelect,
 }: {
   theme: ThemeMetadata;
   selected: boolean;
   mode: "light" | "dark";
+  primaryColor: string;
   onSelect: () => void;
 }) {
+  const inlineTokens = useMemo(() => {
+    if (!isHex(primaryColor)) return undefined;
+    try {
+      const def = getTheme(theme.id);
+      const tokens = applyPrimaryColor(def.modes[mode], mode, primaryColor, def.colorProfile);
+      const style: Record<string, string> = {};
+      for (const key of THEME_TOKEN_KEYS) {
+        style[THEME_TOKEN_CSS_VARS[key]] = tokens[key];
+      }
+      return style;
+    } catch {
+      return undefined;
+    }
+  }, [theme.id, mode, primaryColor]);
+
   return (
     <label
       data-theme={theme.id}
       data-color-mode={mode}
+      style={inlineTokens}
       className={cn(
         "relative flex cursor-pointer flex-col gap-2 rounded-[var(--radius-md)] border-[length:var(--border-width)] p-3 transition-colors",
         "bg-bg text-text",
@@ -241,7 +265,7 @@ export function SettingsForm({
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium">Tema del catálogo</legend>
         <p className="text-xs text-text-muted">
-          La vista previa usa el color guardado. El panel siempre mantiene su superficie neutral.
+          La vista previa usa tu color principal y modo seleccionados en vivo. El panel siempre mantiene su superficie neutral.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {themes.map((theme) => (
@@ -249,6 +273,7 @@ export function SettingsForm({
               key={theme.id}
               theme={theme}
               mode={colorModeDefault}
+              primaryColor={color}
               selected={themeId === theme.id}
               onSelect={() => setThemeId(theme.id)}
             />

@@ -1,5 +1,6 @@
 import {
   deletePanelStore,
+  deleteStoreLogo,
   reactivatePanelStore,
   suspendPanelStore,
   updatePanelStore,
@@ -23,6 +24,7 @@ import type { Route } from "./+types/settings";
 import { LogoUploader } from "~/components/panel/image-uploaders";
 import { SettingsForm } from "~/components/panel/settings-form";
 import {
+  ConfirmDeleteDialog,
   Field,
   FormError,
   PanelAlert,
@@ -177,6 +179,18 @@ export async function action({ request }: Route.ActionArgs) {
     }
   }
 
+  if (intent === "delete-logo") {
+    if (form.get("confirm") !== "eliminar") {
+      return data({ ok: false, intent, formError: "Confirma para quitar el logo." }, { status: 400 });
+    }
+    try {
+      await deleteStoreLogo(context.runtime.api, apiContext);
+      return flash("store-saved");
+    } catch (error) {
+      return data(failure(error, "No pudimos quitar el logo."), { status: 400 });
+    }
+  }
+
   if (intent === "suspend") {
     if (form.get("confirm") !== "suspender") {
       return data(
@@ -312,10 +326,24 @@ export default function PanelSettings({ loaderData }: Route.ComponentProps) {
       </PanelCard>
 
       <PanelCard>
-        <h2 className="font-heading text-base font-semibold">Logo</h2>
-        <p className="mt-1 text-sm text-text-muted">
-          Se muestra en la cabecera de la tienda. Se normaliza a WebP en el navegador.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="font-heading text-base font-semibold">Logo</h2>
+            <p className="mt-1 text-sm text-text-muted">
+              Se muestra en la cabecera de la tienda. Se normaliza a WebP en el navegador.
+            </p>
+          </div>
+          {store.logoUrl ? (
+            <ConfirmDeleteDialog
+              triggerLabel="Quitar logo"
+              title="Quitar logo de la tienda"
+              description="Se eliminará el logo actual y la cabecera mostrará solo el nombre de tu tienda."
+              confirmLabel="Quitar logo"
+              intent="delete-logo"
+              disabled={pending}
+            />
+          ) : null}
+        </div>
         <div className="mt-3">
           <LogoUploader currentLogoUrl={store.logoUrl} />
         </div>

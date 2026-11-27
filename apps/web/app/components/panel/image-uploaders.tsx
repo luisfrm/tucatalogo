@@ -316,6 +316,9 @@ function HeroFileField({
   disabled: boolean;
   onChange: (file: File | null) => void;
 }) {
+  const preview = useObjectPreview(file);
+  const isMobile = id.includes("mobile");
+
   return (
     <Field id={id} label={label} hint={hint} required>
       <input
@@ -327,6 +330,15 @@ function HeroFileField({
         onChange={(event) => onChange(event.currentTarget.files?.[0] ?? null)}
         className="block w-full cursor-pointer rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border-strong bg-surface px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-[var(--color-primary-subtle)] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-text disabled:opacity-60"
       />
+      {preview ? (
+        <div className="mt-2 overflow-hidden rounded-[var(--radius-sm)] border border-border bg-surface-2">
+          <img
+            src={preview}
+            alt="Vista previa de recorte"
+            className={isMobile ? "mx-auto aspect-[3/4] max-h-44 object-cover" : "aspect-video w-full object-cover"}
+          />
+        </div>
+      ) : null}
       <p className="text-xs text-text-muted">{file ? file.name : "Sin archivo"}</p>
     </Field>
   );

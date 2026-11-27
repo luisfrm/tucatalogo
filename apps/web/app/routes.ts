@@ -7,6 +7,7 @@ import {
 
 export default [
   index("routes/home.tsx"),
+  route("productos", "routes/products.tsx"),
   route("producto/:slug", "routes/product.tsx"),
   route("color-mode", "routes/color-mode.ts"),
   route("sitemap.xml", "routes/sitemap.ts"),

@@ -21,6 +21,7 @@ import { dbFor } from "../middleware/session";
 import { sessionOwner, sessionStore, sessionStoreId } from "../middleware/store-context";
 import {
   deleteStoreByOwner,
+  deleteStoreLogo,
   getPanelStore,
   reactivateStoreByOwner,
   suspendStoreByOwner,
@@ -54,6 +55,11 @@ export const panelStoreRoutes = new Hono<AppEnv>()
     });
     const result = await uploadStoreLogo(c.env, dbFor(c), context(c), upload);
     return c.json(panelStoreLogoResponseSchema.parse(result), 201);
+  })
+  /** DELETE /panel/store/logo — removes the logo from R2 and clears `logo_key`. */
+  .delete("/logo", async (c) => {
+    const store = await deleteStoreLogo(c.env, dbFor(c), context(c));
+    return c.json(panelStoreSchema.parse(store));
   })
   /** POST /panel/store/suspend — `{reason?}`; suspensión del dueño. */
   .post("/suspend", async (c) => {

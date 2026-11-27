@@ -7,6 +7,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 import {
+  publicCategoryListSchema,
   publicHeroSchema,
   publicProductDetailSchema,
   publicProductListSchema,
@@ -18,6 +19,7 @@ import {
 import { parseParams, parseQuery } from "../libs/validate";
 import { publicStore, requirePublicStore } from "../middleware/public-store";
 import { dbFor } from "../middleware/session";
+import { listPublicCategories } from "../services/category";
 import { listPublicHero } from "../services/hero";
 import { getPublicProduct, getPublicSitemap, listPublicProducts } from "../services/product";
 import { toPublicStore } from "../services/store";
@@ -46,6 +48,11 @@ export const publicRoutes = new Hono<AppEnv>()
     const params = parseParams(c, z.object({ productSlug: z.string().trim().min(1).max(63) }));
     const product = await getPublicProduct(c.env, dbFor(c), publicStore(c), params.productSlug);
     return c.json(publicProductDetailSchema.parse(product));
+  })
+  /** GET /public/:slug/categories — categorías ordenadas con conteo de activos. */
+  .get("/:slug/categories", async (c) => {
+    const categories = await listPublicCategories(dbFor(c), publicStore(c));
+    return c.json(publicCategoryListSchema.parse(categories));
   })
   /** GET /public/:slug/sitemap — slugs y `updatedAt` para que `web` genere el XML. */
   .get("/:slug/sitemap", async (c) => {

@@ -2,15 +2,18 @@ import {
   createPanelCategory,
   deletePanelCategory,
   listPanelCategories,
+  reorderPanelCategories,
   updatePanelCategory,
 } from "@tucatalogo/api-client";
 import { categoryCreateSchema, categoryUpdateSchema } from "@tucatalogo/types";
 import { Button, Input } from "@tucatalogo/ui";
+import { useState } from "react";
 import { Form, data, useActionData, useNavigation } from "react-router";
 
 import type { Route } from "./+types/categories";
 
 import {
+  ConfirmDeleteDialog,
   Field,
   PanelAlert,
   PanelCard,
@@ -18,7 +21,11 @@ import {
   PanelFlash,
   PanelPageHeader,
 } from "~/components/panel/panel-ui";
-import { panelFlashMessage, type PanelActionData } from "~/lib/panel";import {
+import {
+  panelFlashMessage,
+  slugifyCatalogName,
+  type PanelActionData,
+} from "~/lib/panel";import {
   panelActionError,
   redirectTo,
   requirePanelContext,
@@ -140,6 +147,33 @@ export async function action({ request }: Route.ActionArgs) {
     }
   }
 
+  if (intent === "reorder") {
+    const categoryId = String(form.get("categoryId") ?? "");
+    const direction = form.get("direction") === "up" ? "up" : "down";
+    if (!categoryId) {
+      return data({ ok: false as const, intent, formError: "Falta la categoría." }, { status: 400 });
+    }
+    try {
+      const current = await listPanelCategories(context.runtime.api, apiContext);
+      const ids = current.items.map((item) => item.id);
+      const index = ids.indexOf(categoryId);
+      const swapWith = direction === "up" ? index - 1 : index + 1;
+      if (index === -1 || swapWith < 0 || swapWith >= ids.length) {
+        return data(
+          { ok: false as const, intent, formError: "La categoría ya está en el extremo." },
+          { status: 400 },
+        );
+      }
+      const next = [...ids];
+      [next[index], next[swapWith]] = [next[swapWith], next[index]];
+      await reorderPanelCategories(context.runtime.api, apiContext, { ids: next });
+      return flash("category-reordered");
+    } catch (error) {
+      const mapped = panelActionError(error, "No pudimos reordenar las categorías.");
+      return data({ ok: false as const, intent, ...mapped }, { status: mapped.status });
+    }
+  }
+
   return data({ ok: false, intent, formError: "Acción no reconocida." }, { status: 400 });
 }
 
@@ -150,6 +184,10 @@ export default function PanelCategories({ loaderData }: Route.ComponentProps) {
   const error = actionData?.formError;
   const fieldErrors = actionData?.fieldErrors ?? {};
   const totalProducts = loaderData.items.reduce((sum, category) => sum + category.productCount, 0);
+  const [newName, setNewName] = useState("");
+  const [newSlug, setNewSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const effectiveNewSlug = slugTouched ? newSlug : slugifyCatalogName(newName);
 
   return (
     <div className="flex flex-col gap-5">
@@ -176,6 +214,8 @@ export default function PanelCategories({ loaderData }: Route.ComponentProps) {
               <Input
                 id="category-name"
                 name="name"
+                value={newName}
+                onChange={(e) => setNewName(e.currentTarget.value)}
                 maxLength={80}
                 required
                 invalid={Boolean(fieldErrors.name)}
@@ -186,12 +226,17 @@ export default function PanelCategories({ loaderData }: Route.ComponentProps) {
               id="category-slug"
               label="Identificador"
               error={fieldErrors.slug}
-              hint="Minúsculas, números y guiones. Ej.: sandalias."
+              hint="Minúsculas, números y guiones. Se genera automáticamente del nombre."
               required
             >
               <Input
                 id="category-slug"
                 name="slug"
+                value={effectiveNewSlug}
+                onChange={(e) => {
+                  setSlugTouched(true);
+                  setNewSlug(e.currentTarget.value.toLowerCase());
+                }}
                 maxLength={63}
                 required
                 invalid={Boolean(fieldErrors.slug)}
@@ -215,7 +260,10 @@ export default function PanelCategories({ loaderData }: Route.ComponentProps) {
             />
           ) : (
             <ul className="flex flex-col gap-3">
-              {loaderData.items.map((category) => (
+              {loaderData.items.map((category, index) => {
+                const isFirst = index === 0;
+                const isLast = index === loaderData.items.length - 1;
+                return (
                 <li key={category.id}>
                   <PanelCard as="article">
                     <div className="flex flex-wrap items-start justify-between gap-2">
@@ -227,28 +275,45 @@ export default function PanelCategories({ loaderData }: Route.ComponentProps) {
                           {category.productCount === 1 ? "producto" : "productos"}
                         </p>
                       </div>
-                      <details className="relative">
-                        <summary className="inline-flex h-11 cursor-pointer list-none items-center rounded-[var(--radius-md)] px-3 text-sm font-medium text-danger hover:bg-surface-2 sm:h-9">
-                          Eliminar
-                        </summary>
-                        <div className="absolute right-0 z-20 mt-1 w-72 rounded-[var(--radius-md)] border-[length:var(--border-width)] border-border bg-surface p-3 shadow-[var(--shadow-lg)]">
-                          <Form method="post" className="flex flex-col gap-2">
-                            <input type="hidden" name="intent" value="delete" />
-                            <input type="hidden" name="categoryId" value={category.id} />
-                            <p className="text-sm">
-                              Eliminar “{category.name}” deja {category.productCount} productos sin
-                              categoría. No se borran productos.
-                            </p>
-                            <label className="flex items-start gap-2 text-xs">
-                              <input type="checkbox" name="confirm" value="eliminar" required className="mt-0.5 size-4" />
-                              Confirmo que quiero eliminar esta categoría.
-                            </label>
-                            <Button type="submit" variant="danger" size="sm" disabled={pending}>
-                              Eliminar categoría
-                            </Button>
-                          </Form>
-                        </div>
-                      </details>
+                      <div className="flex items-center gap-1">
+                        <Form method="post">
+                          <input type="hidden" name="intent" value="reorder" />
+                          <input type="hidden" name="categoryId" value={category.id} />
+                          <input type="hidden" name="direction" value="up" />
+                          <Button
+                            type="submit"
+                            variant="ghost"
+                            size="icon"
+                            disabled={pending || isFirst}
+                            aria-label={`Subir ${category.name}`}
+                          >
+                            ↑
+                          </Button>
+                        </Form>
+                        <Form method="post">
+                          <input type="hidden" name="intent" value="reorder" />
+                          <input type="hidden" name="categoryId" value={category.id} />
+                          <input type="hidden" name="direction" value="down" />
+                          <Button
+                            type="submit"
+                            variant="ghost"
+                            size="icon"
+                            disabled={pending || isLast}
+                            aria-label={`Bajar ${category.name}`}
+                          >
+                            ↓
+                          </Button>
+                        </Form>
+                        <ConfirmDeleteDialog
+                          triggerLabel="Eliminar"
+                          title={`Eliminar “${category.name}”`}
+                          description={`Eliminar esta categoría deja ${category.productCount} productos sin categoría. No se borran productos.`}
+                          confirmLabel="Eliminar categoría"
+                          intent="delete"
+                          fields={{ categoryId: category.id }}
+                          disabled={pending}
+                        />
+                      </div>
                     </div>
 
                     <details className="mt-3">
@@ -286,7 +351,8 @@ export default function PanelCategories({ loaderData }: Route.ComponentProps) {
                     </details>
                   </PanelCard>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </div>

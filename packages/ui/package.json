@@ -6,18 +6,30 @@
   "description": "Componentes globales (Radix + CVA + tokens)",
   "exports": {
     ".": "./src/index.ts",
+    "./alert-dialog": "./src/alert-dialog.tsx",
+    "./badge": "./src/badge.tsx",
     "./brand-mark": "./src/brand-mark.tsx",
     "./button": "./src/button.tsx",
+    "./card": "./src/card.tsx",
+    "./cn": "./src/cn.ts",
+    "./dialog": "./src/dialog.tsx",
     "./input": "./src/input.tsx",
     "./select": "./src/select.tsx",
-    "./cn": "./src/cn.ts"
+    "./skeleton": "./src/skeleton.tsx",
+    "./switch": "./src/switch.tsx",
+    "./tabs": "./src/tabs.tsx",
+    "./textarea": "./src/textarea.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
+    "@radix-ui/react-alert-dialog": "1.2.1",
+    "@radix-ui/react-dialog": "1.3.1",
     "@radix-ui/react-slot": "1.5.0",
+    "@radix-ui/react-switch": "1.4.1",
+    "@radix-ui/react-tabs": "1.2.1",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "tailwind-merge": "3.7.0"
