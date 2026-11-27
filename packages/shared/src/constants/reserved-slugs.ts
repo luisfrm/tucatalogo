@@ -17,7 +17,7 @@ export const RESERVED_SLUGS = [
   "cdn",
   "commercial",
   "tucatalogo",
-  // Legado del dominio anterior (`*.tucatalogo.luisrivas.site`): se mantienen
+  // Legado del dominio anterior (`*.tucatalogo.tucatalogo.live`): se mantienen
   // reservados para que nadie registre el slug de un host que existió.
   "console-tucatalogo",
   "tucatalogo-bucket",

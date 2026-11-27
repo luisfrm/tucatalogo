@@ -473,18 +473,18 @@ Al migrar:
 Las cookies son host-only y no llevan `Domain`: no hay migración de sesiones, solo
 se vuelve a iniciar sesión en el host nuevo.
 
-## Migración desde `luisrivas.site` (limpieza)
+## Migración desde `tucatalogo.live` (limpieza)
 
-El proyecto vivió antes en `luisrivas.site`. Esa zona **no se borra ni se
+El proyecto vivió antes en `tucatalogo.live`. Esa zona **no se borra ni se
 reconfigura**: solo se eliminan los registros que eran nuestros, para no dejar
 hosts colgando ni interceptables.
 
-| Registro a eliminar (zona `luisrivas.site`, `a9c8ba1ce44e6421f623f73b69d3e256`) | Motivo |
+| Registro a eliminar (zona `tucatalogo.live`, `a9c8ba1ce44e6421f623f73b69d3e256`) | Motivo |
 | --- | --- |
-| `tucatalogo.luisrivas.site` | Antiguo commercial |
-| `*.tucatalogo.luisrivas.site` | Antiguo comodín de tiendas |
-| `console-tucatalogo.luisrivas.site` | Antiguo console |
-| `tucatalogo-bucket.luisrivas.site` | Antiguo custom domain de R2 |
+| `tucatalogo.tucatalogo.live` | Antiguo commercial |
+| `*.tucatalogo.tucatalogo.live` | Antiguo comodín de tiendas |
+| `console-tucatalogo.tucatalogo.live` | Antiguo console |
+| `tucatalogo-bucket.tucatalogo.live` | Antiguo custom domain de R2 |
 
 No se toca nada más de esa zona (apex, `www`, ni registros de otros proyectos).
 

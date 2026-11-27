@@ -2,11 +2,11 @@
 
 > Nota: la versión vigente de decisiones y plan está en `PLAN.md` (v1.1). Este documento se conserva como baseline.
 
-**Versión:** 1.0 · **Fase:** 1 (MVP) · **Dominio inicial:** `luisrivas.site` (luego `tucatalogo.com`)
+**Versión:** 1.0 · **Fase:** 1 (MVP) · **Dominio inicial:** `tucatalogo.live` (luego `tucatalogo.com`)
 
 ## 1. Resumen
 
-Plataforma SaaS multitienda para publicar catálogos de productos (zapatos, maquillaje, sandalias, etc.). Cada tienda tiene un único propietario, un subdominio propio `slug.luisrivas.site`, un panel de gestión en `/panel-admin` y un botón de pedido por WhatsApp. En el MVP todo es ilimitado y gratuito; las suscripciones (Stripe) y tiers llegan en la Fase 2.
+Plataforma SaaS multitienda para publicar catálogos de productos (zapatos, maquillaje, sandalias, etc.). Cada tienda tiene un único propietario, un subdominio propio `slug.tucatalogo.live`, un panel de gestión en `/panel-admin` y un botón de pedido por WhatsApp. En el MVP todo es ilimitado y gratuito; las suscripciones (Stripe) y tiers llegan en la Fase 2.
 
 ## 2. Decisiones técnicas
 
@@ -27,16 +27,16 @@ Plataforma SaaS multitienda para publicar catálogos de productos (zapatos, maqu
 ### 3.1 Apps y paquetes
 
 - `apps/api` – Hono. Único componente con acceso a D1 y R2.
-- `apps/commercial` – Landing y registro en `luisrivas.site`.
-- `apps/panel` – Panel de gestión en `slug.luisrivas.site/panel-admin/*`.
-- `apps/web` – Tienda pública en `slug.luisrivas.site/*`.
+- `apps/commercial` – Landing y registro en `tucatalogo.live`.
+- `apps/panel` – Panel de gestión en `slug.tucatalogo.live/panel-admin/*`.
+- `apps/web` – Tienda pública en `slug.tucatalogo.live/*`.
 - `packages/db` (esquema y migraciones), `packages/themes` (tokens de los temas), `packages/ui`, `packages/types`, `packages/config`.
 
 ### 3.2 Enrutamiento y subdominios
 
-- Un registro DNS wildcard `*` (proxied) y una ruta de Worker `*.luisrivas.site/*` hacia Web. No se crea nada por tienda al registrarse.
-- Ruta más específica `*.luisrivas.site/panel-admin/*` hacia Panel (Cloudflare prioriza la ruta más específica).
-- `luisrivas.site/*` hacia Commercial.
+- Un registro DNS wildcard `*` (proxied) y una ruta de Worker `*.tucatalogo.live/*` hacia Web. No se crea nada por tienda al registrarse.
+- Ruta más específica `*.tucatalogo.live/panel-admin/*` hacia Panel (Cloudflare prioriza la ruta más específica).
+- `tucatalogo.live/*` hacia Commercial.
 - Web y Panel leen el header `Host`, extraen el `slug` y lo resuelven a `storeId` vía API.
 - En local y dev se admite `?siteId=` como alternativa al subdominio.
 - Slugs reservados: `www`, `api`, `panel`, `admin`, `app`, `mail`, `static`, `media`, `assets`, `cdn`, `commercial`, entre otros.
@@ -44,7 +44,7 @@ Plataforma SaaS multitienda para publicar catálogos de productos (zapatos, maqu
 ### 3.3 Service bindings
 
 - Commercial, Panel y Web llaman a API mediante service binding. La API no se consume por URL pública entre workers.
-- Las cookies de sesión son *host-only* (por subdominio), ya que cada tienda tiene su propio usuario; no se requiere `domain=.luisrivas.site`.
+- Las cookies de sesión son *host-only* (por subdominio), ya que cada tienda tiene su propio usuario; no se requiere `domain=.tucatalogo.live`.
 - Panel enruta `/api/auth/*` hacia API por binding para que la cookie quede en el host de la tienda.
 
 ## 4. Modelo de datos (alto nivel)
@@ -66,7 +66,7 @@ Notas:
 
 ## 5. Requisitos funcionales
 
-### 5.1 Commercial (`luisrivas.site`)
+### 5.1 Commercial (`tucatalogo.live`)
 
 - **RF-C1** Landing con propuesta de valor, temas de ejemplo y CTA de registro.
 - **RF-C2** Registro multipaso con botones Anterior / Siguiente:
@@ -89,7 +89,7 @@ Notas:
 - **RF-A6** Eliminación de tienda: borra todos los datos y los objetos de R2 del propietario.
 - **RF-A7** Validación Zod en todas las entradas y respuestas de error consistentes.
 
-### 5.3 Panel (`slug.luisrivas.site/panel-admin`)
+### 5.3 Panel (`slug.tucatalogo.live/panel-admin`)
 
 - **RF-P1** Login con correo y contraseña; flujo completo de olvidé mi contraseña por correo.
 - **RF-P2** Productos: crear, editar, activar/ocultar (`isActive`), eliminar lógico (`isDeleted`), nombre, precio, categoría y varias imágenes con orden (carrusel).
@@ -154,7 +154,7 @@ Suscripciones y tiers con Stripe, límites por plan, variantes de producto (tall
 
 El MVP se considera listo cuando se cumplen **todos** estos puntos:
 
-1. Un usuario nuevo se registra en Commercial, valida el OTP y su tienda queda accesible en `slug.luisrivas.site` en prod, sin intervención manual.
+1. Un usuario nuevo se registra en Commercial, valida el OTP y su tienda queda accesible en `slug.tucatalogo.live` en prod, sin intervención manual.
 2. Inicia sesión en `/panel-admin`, crea al menos 10 productos con varias imágenes, configura un hero con 2 o más slides (desktop y mobile) y los ve reflejados en la tienda.
 3. Recuperación de contraseña funcional de extremo a extremo.
 4. Cambia de tema en settings y la tienda refleja fuentes, radios, bordes y colores sin parpadeo, probado con los 5 temas en claro y oscuro y con un color principal personalizado.
@@ -177,10 +177,10 @@ El MVP se considera listo cuando se cumplen **todos** estos puntos:
 - El propietario suspende o elimina su tienda desde `/panel-admin/settings`; no existe super-admin en el MVP.
 - Las imágenes se sirven desde R2 con caché agresiva.
 - Los productos no tienen stock; solo `isActive` e `isDeleted`.
-- La Fase 1 usa `luisrivas.site`; el cambio a `tucatalogo.com` es solo de configuración.
+- La Fase 1 usa `tucatalogo.live`; el cambio a `tucatalogo.com` es solo de configuración.
 
 ## 12. Prerrequisitos antes de implementar
 
-- Zona `luisrivas.site` activa en Cloudflare (necesaria para las rutas wildcard).
+- Zona `tucatalogo.live` activa en Cloudflare (necesaria para las rutas wildcard).
 - Cuenta de Resend con el dominio verificado para enviar OTP y recuperación de contraseña.
 - `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` cargados como secretos en GitHub.

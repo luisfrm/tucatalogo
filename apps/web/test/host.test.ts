@@ -26,7 +26,7 @@ describe("resolución de host del storefront", () => {
     expect(resolveStoreSlug(`admin.${SUBZONE}`, SUBZONE).reason).toBe("reserved");
     expect(resolveStoreSlug(`panel.${SUBZONE}`, SUBZONE).reason).toBe("reserved");
     // El dominio anterior ya no es nuestro: no resuelve tienda.
-    expect(resolveStoreSlug("mi-tienda.luisrivas.site", SUBZONE).reason).toBe("invalid");
+    expect(resolveStoreSlug("mi-tienda.tucatalogo.live", SUBZONE).reason).toBe("invalid");
     expect(resolveStoreSlug(`a.b.${SUBZONE}`, SUBZONE).reason).toBe("invalid");
     expect(resolveStoreSlug("otro-dominio.com", SUBZONE).reason).toBe("invalid");
     expect(resolveStoreSlug(`Bad_Slug.${SUBZONE}`, SUBZONE).reason).toBe("invalid");

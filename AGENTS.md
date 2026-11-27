@@ -17,7 +17,7 @@ Plan vigente y detalle de decisiones: **`PLAN.md` (v1.1)**. Los requerimientos v
 - **Un solo dominio propio: `tucatalogo.live`.** El **apex es el commercial**;
   `console` y `bucket` (R2) son hosts exactos de la misma zona; `*.tucatalogo.live`
   cubre solo las tiendas y `www` redirige 301 al apex.
-- `luisrivas.site` queda **fuera del proyecto**: solo se eliminan sus registros
+- `tucatalogo.live` queda **fuera del proyecto**: solo se eliminan sus registros
   `tucatalogo*`; el resto de esa zona no se toca.
 - Apex (commercial) y `www` → 301 a `tucatalogo.live` (Redirect Rules). R2: `bucket.tucatalogo.live`, host único.
 - Dev: `*-dev.workers.dev` + `?siteId`; sin wildcard.

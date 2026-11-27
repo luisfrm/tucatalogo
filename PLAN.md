@@ -125,7 +125,7 @@ Regla de ubicación (P3): `constants/*.ts` y `libs/*.ts` que se usan 2+ veces **
 
 Reglas de convivencia:
 
-1. **Un solo dominio (`tucatalogo.live`).** El apex es el commercial; `console` y `bucket` (R2) son hosts exactos de la misma zona; `*.tucatalogo.live` cubre solo las tiendas y `www` redirige al apex. `luisrivas.site` queda fuera del proyecto.
+1. **Un solo dominio (`tucatalogo.live`).** El apex es el commercial; `console` y `bucket` (R2) son hosts exactos de la misma zona; `*.tucatalogo.live` cubre solo las tiendas y `www` redirige al apex. `tucatalogo.live` queda fuera del proyecto.
 2. Cloudflare prioriza la ruta más específica: `console.tucatalogo.live/*` y `tucatalogo.live/*` ganan a `*.tucatalogo.live/*`.
 3. Defensa en profundidad: `web` valida el slug contra la lista de reservados (`console`, `bucket`, `www`, `admin`, `panel`, …) y responde 404 con log si recibe un host que no le corresponde.
 4. **Gate F0: reabierto con la zona única.** `*.tucatalogo.live/*` **sí puede** casar con `bucket.tucatalogo.live` (es un solo label bajo el apex), así que la precedencia frente al custom domain de R2 debe verificarse empíricamente. Si el wildcard intercepta, la salida es una **ruta de negación** (`bucket.tucatalogo.live/*` sin script, vía API/dashboard) — nunca un host alternativo ni `cdn.`.
